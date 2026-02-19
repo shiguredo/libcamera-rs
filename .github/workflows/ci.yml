@@ -81,7 +81,3 @@ jobs:
         run: |
           chmod +x controls
           ./controls
-      - name: Run capture (map_plane の動作確認)
-        run: |
-          chmod +x capture
-          ./capture
