@@ -61,6 +61,7 @@ jobs:
             target/aarch64-unknown-linux-gnu/release/examples/list_cameras
             target/aarch64-unknown-linux-gnu/release/examples/capture
             target/aarch64-unknown-linux-gnu/release/examples/controls
+          if-no-files-found: error
   verify:
     name: Verify (Raspberry Pi)
     needs: build
@@ -80,3 +81,7 @@ jobs:
         run: |
           chmod +x controls
           ./controls
+      - name: Run capture (map_plane の動作確認)
+        run: |
+          chmod +x capture
+          ./capture

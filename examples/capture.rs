@@ -85,6 +85,7 @@ fn main() {
         sequence: u32,
         timestamp: u64,
         status: String,
+        planes_bytes: usize,
     }
 
     let frames: Arc<Mutex<Vec<FrameInfo>>> = Arc::new(Mutex::new(Vec::new()));
@@ -100,6 +101,10 @@ fn main() {
                 FrameStatus::Cancelled => "cancelled",
                 FrameStatus::Startup => "startup",
             };
+            let planes_bytes: usize = (0..buffer.planes_count())
+                .filter_map(|i| buffer.map_plane(i))
+                .map(|m| m.len())
+                .sum();
             let Ok(mut guard) = frames_cb.lock() else {
                 return;
             };
@@ -107,6 +112,7 @@ fn main() {
                 sequence: meta.sequence,
                 timestamp: meta.timestamp,
                 status: status.to_string(),
+                planes_bytes,
             });
         }
     });
@@ -182,7 +188,8 @@ fn main() {
                         f.element(nojson::object(|f| {
                             f.member("sequence", frame.sequence)?;
                             f.member("timestamp", frame.timestamp)?;
-                            f.member("status", frame.status.as_str())
+                            f.member("status", frame.status.as_str())?;
+                            f.member("planes_bytes", frame.planes_bytes)
                         }))?;
                     }
                     Ok(())

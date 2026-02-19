@@ -1,5 +1,40 @@
 use crate::sys as ffi;
 
+/// mmap されたプレーンデータの RAII ラッパー
+///
+/// Drop 時に munmap を呼び出す。
+pub struct MappedPlane {
+    ptr: *mut libc::c_void,
+    len: usize,
+}
+
+// mmap されたメモリはプロセス内でスレッド間共有可能
+unsafe impl Send for MappedPlane {}
+unsafe impl Sync for MappedPlane {}
+
+impl MappedPlane {
+    /// プレーンデータのスライスを返す
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.ptr as *const u8, self.len) }
+    }
+
+    /// プレーンデータのバイト長を返す
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    /// プレーンデータが空かどうかを返す
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+}
+
+impl Drop for MappedPlane {
+    fn drop(&mut self) {
+        unsafe { libc::munmap(self.ptr, self.len) };
+    }
+}
+
 /// フレームバッファのプレーン情報
 #[derive(Debug, Clone, Copy)]
 pub struct FrameBufferPlane {
@@ -129,5 +164,30 @@ impl FrameBufferRef<'_> {
             sequence: raw.sequence,
             timestamp: raw.timestamp,
         }
+    }
+
+    /// 指定インデックスのプレーンを mmap してデータを返す
+    ///
+    /// 失敗した場合は None を返す。
+    pub fn map_plane(&self, index: usize) -> Option<MappedPlane> {
+        let plane = self.plane(index)?;
+        let len = plane.length as usize;
+        if len == 0 {
+            return None;
+        }
+        let ptr = unsafe {
+            libc::mmap(
+                std::ptr::null_mut(),
+                len,
+                libc::PROT_READ,
+                libc::MAP_SHARED,
+                plane.fd,
+                plane.offset as libc::off_t,
+            )
+        };
+        if ptr == libc::MAP_FAILED {
+            return None;
+        }
+        Some(MappedPlane { ptr, len })
     }
 }

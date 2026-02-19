@@ -20,7 +20,9 @@ pub use configuration::{CameraConfiguration, ConfigStatus};
 pub use control_ids::{core, draft, rpi};
 pub use controls::{ControlId, ControlList, ControlType, Direction};
 pub use error::{Error, Result};
-pub use frame_buffer::{FrameBuffer, FrameBufferPlane, FrameBufferRef, FrameMetadata, FrameStatus};
+pub use frame_buffer::{
+    FrameBuffer, FrameBufferPlane, FrameBufferRef, FrameMetadata, FrameStatus, MappedPlane,
+};
 pub use geometry::{Point, Rectangle, Size};
 pub use pixel_format::PixelFormat;
 pub use request::{CompletedRequest, Request, RequestStatus};
