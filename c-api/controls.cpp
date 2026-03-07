@@ -177,3 +177,169 @@ void lc_control_list_set_int32_array(lc_control_list_t* list,
   ControlValue cv(Span<const int32_t>(values, count));
   list->list->set(id, cv);
 }
+
+bool lc_control_list_get_string(const lc_control_list_t* list,
+                               unsigned int id,
+                               const char** out,
+                               size_t* len) {
+  if (!list->list->contains(id)) {
+    return false;
+  }
+  const auto& val = list->list->get(id);
+  if (val.type() != ControlTypeString) {
+    return false;
+  }
+  const auto& str = val.get<std::string>();
+  *out = str.c_str();
+  *len = str.size();
+  return true;
+}
+
+bool lc_control_list_get_size(const lc_control_list_t* list,
+                              unsigned int id,
+                              lc_size_t* out) {
+  if (!list->list->contains(id)) {
+    return false;
+  }
+  const auto& val = list->list->get(id);
+  if (val.type() != ControlTypeSize) {
+    return false;
+  }
+  auto sz = val.get<Size>();
+  out->width = sz.width;
+  out->height = sz.height;
+  return true;
+}
+
+bool lc_control_list_get_int64_array(const lc_control_list_t* list,
+                                     unsigned int id,
+                                     const int64_t** out,
+                                     size_t* count) {
+  if (!list->list->contains(id)) {
+    return false;
+  }
+  const auto& val = list->list->get(id);
+  if (val.type() != ControlTypeInteger64 || !val.isArray()) {
+    return false;
+  }
+  auto data = val.data();
+  *out = reinterpret_cast<const int64_t*>(data.data());
+  *count = val.numElements();
+  return true;
+}
+
+void lc_control_list_set_int64_array(lc_control_list_t* list,
+                                     unsigned int id,
+                                     const int64_t* values,
+                                     size_t count) {
+  ControlValue cv(Span<const int64_t>(values, count));
+  list->list->set(id, cv);
+}
+
+bool lc_control_list_get_byte(const lc_control_list_t* list,
+                              unsigned int id,
+                              uint8_t* out) {
+  if (!list->list->contains(id)) {
+    return false;
+  }
+  const auto& val = list->list->get(id);
+  if (val.type() != ControlTypeByte) {
+    return false;
+  }
+  *out = val.get<uint8_t>();
+  return true;
+}
+
+void lc_control_list_set_byte(lc_control_list_t* list,
+                              unsigned int id,
+                              uint8_t value) {
+  ControlValue cv;
+  cv.set<uint8_t>(value);
+  list->list->set(id, cv);
+}
+
+bool lc_control_list_get_byte_array(const lc_control_list_t* list,
+                                    unsigned int id,
+                                    const uint8_t** out,
+                                    size_t* count) {
+  if (!list->list->contains(id)) {
+    return false;
+  }
+  const auto& val = list->list->get(id);
+  if (val.type() != ControlTypeByte || !val.isArray()) {
+    return false;
+  }
+  auto data = val.data();
+  *out = reinterpret_cast<const uint8_t*>(data.data());
+  *count = val.numElements();
+  return true;
+}
+
+void lc_control_list_set_byte_array(lc_control_list_t* list,
+                                    unsigned int id,
+                                    const uint8_t* values,
+                                    size_t count) {
+  ControlValue cv(Span<const uint8_t>(values, count));
+  list->list->set(id, cv);
+}
+
+bool lc_control_list_get_rectangle_array(const lc_control_list_t* list,
+                                         unsigned int id,
+                                         const lc_rectangle_t** out,
+                                         size_t* count) {
+  if (!list->list->contains(id)) {
+    return false;
+  }
+  const auto& val = list->list->get(id);
+  if (val.type() != ControlTypeRectangle || !val.isArray()) {
+    return false;
+  }
+  auto data = val.data();
+  *out = reinterpret_cast<const lc_rectangle_t*>(data.data());
+  *count = val.numElements();
+  return true;
+}
+
+void lc_control_list_set_rectangle_array(lc_control_list_t* list,
+                                         unsigned int id,
+                                         const lc_rectangle_t* values,
+                                         size_t count) {
+  std::vector<Rectangle> rects;
+  rects.reserve(count);
+  for (size_t i = 0; i < count; i++) {
+    rects.emplace_back(values[i].x, values[i].y,
+                       values[i].width, values[i].height);
+  }
+  ControlValue cv(Span<const Rectangle>(rects));
+  list->list->set(id, cv);
+}
+
+bool lc_control_list_get_point_array(const lc_control_list_t* list,
+                                     unsigned int id,
+                                     const lc_point_t** out,
+                                     size_t* count) {
+  if (!list->list->contains(id)) {
+    return false;
+  }
+  const auto& val = list->list->get(id);
+  if (val.type() != ControlTypePoint || !val.isArray()) {
+    return false;
+  }
+  auto data = val.data();
+  *out = reinterpret_cast<const lc_point_t*>(data.data());
+  *count = val.numElements();
+  return true;
+}
+
+void lc_control_list_set_point_array(lc_control_list_t* list,
+                                     unsigned int id,
+                                     const lc_point_t* values,
+                                     size_t count) {
+  std::vector<Point> points;
+  points.reserve(count);
+  for (size_t i = 0; i < count; i++) {
+    points.emplace_back(values[i].x, values[i].y);
+  }
+  ControlValue cv(Span<const Point>(points));
+  list->list->set(id, cv);
+}

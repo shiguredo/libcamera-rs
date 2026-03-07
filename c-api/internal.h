@@ -12,6 +12,7 @@
 #include <libcamera/stream.h>
 
 #include <memory>
+#include <vector>
 
 using namespace libcamera;
 
