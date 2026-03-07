@@ -6,6 +6,7 @@ on:
       - "c-api/**"
       - "src/**"
       - "examples/**"
+      - "sysroot/**"
       - "Cargo.toml"
       - ".github/workflows/ci.yml"
   schedule:
@@ -18,14 +19,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      PKG_CONFIG_SYSROOT_DIR: /opt/rpi-sysroot
-      PKG_CONFIG_LIBDIR: /opt/rpi-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig:/opt/rpi-sysroot/usr/share/pkgconfig
+      SYSROOT_PATH: ${{ github.workspace }}/target/shiguredo-sysroot/raspberry-pi-os_armv8/sysroot
       PKG_CONFIG_ALLOW_CROSS: "1"
-      CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
-      CXX_aarch64_unknown_linux_gnu: aarch64-linux-gnu-g++
-      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS: "-C link-arg=--sysroot=/opt/rpi-sysroot"
-      BINDGEN_EXTRA_CLANG_ARGS_aarch64_unknown_linux_gnu: "--target=aarch64-linux-gnu --sysroot=/opt/rpi-sysroot"
     steps:
       - name: Checkout sources
         uses: actions/checkout@v6
@@ -34,24 +29,42 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mmdebstrap crossbuild-essential-arm64 libclang-dev pkg-config
-      - name: Build aarch64 sysroot
-        run: |
-          sudo mmdebstrap \
-            --variant=extract \
-            --architectures=arm64 \
-            --include=libcamera-dev,libc6-dev \
-            trixie /opt/rpi-sysroot \
-            "deb [trusted=yes] http://deb.debian.org/debian trixie main" \
-            "deb [trusted=yes] http://archive.raspberrypi.com/debian trixie main"
-          # /dev 内のシンボリックリンクは不要なので削除する
-          sudo rm -rf /opt/rpi-sysroot/dev
-          # usrmerge シンボリックリンクを作成する（リンカスクリプト内の絶対パス /lib/... を解決するため）
-          sudo ln -sf usr/lib /opt/rpi-sysroot/lib
+          sudo apt-get install -y build-essential \
+            libclang-dev \
+            clang \
+            debian-archive-keyring \
+            gcc-aarch64-linux-gnu
+          # cargo-shiguredo-sysroot は独自 apt 設定で sources.list のみ差し替えるため、
+          # Debian の keyring を trusted.gpg.d に配置しないと trixie の署名検証に失敗する。
+          sudo install -Dm644 /usr/share/keyrings/debian-archive-keyring.gpg \
+            /etc/apt/trusted.gpg.d/debian-archive-keyring.gpg
+          # Raspberry Pi アーカイブの keyring をインストールし trusted.gpg.d に配置する
+          curl -fsSL http://archive.raspberrypi.com/debian/pool/main/r/raspberrypi-archive-keyring/raspberrypi-archive-keyring_2021.1.1+rpt1_all.deb \
+            -o /tmp/rpi-keyring.deb && sudo dpkg -i /tmp/rpi-keyring.deb && rm /tmp/rpi-keyring.deb
+          sudo install -Dm644 /usr/share/keyrings/raspberrypi-archive-keyring.gpg \
+            /etc/apt/trusted.gpg.d/raspberrypi-archive-keyring.gpg
+      - name: Install cargo-shiguredo-sysroot
+        run: cargo install --git https://github.com/shiguredo/cargo-sysroot.git
+      - name: Install sysroot
+        run: cargo shiguredo-sysroot --config sysroot/raspberry-pi-os_armv8.json
       - run: cargo fmt --all --check
-      - run: cargo check --workspace --target aarch64-unknown-linux-gnu
-      - run: cargo clippy --workspace --target aarch64-unknown-linux-gnu -- -D warnings
+      - name: Check
+        env:
+          PKG_CONFIG_SYSROOT_DIR: ${{ env.SYSROOT_PATH }}
+          PKG_CONFIG_LIBDIR: ${{ env.SYSROOT_PATH }}/usr/lib/aarch64-linux-gnu/pkgconfig:${{ env.SYSROOT_PATH }}/usr/share/pkgconfig
+          BINDGEN_EXTRA_CLANG_ARGS_aarch64_unknown_linux_gnu: "--target=aarch64-linux-gnu --sysroot=${{ env.SYSROOT_PATH }}"
+        run: cargo check --workspace --target aarch64-unknown-linux-gnu
+      - name: Clippy
+        env:
+          PKG_CONFIG_SYSROOT_DIR: ${{ env.SYSROOT_PATH }}
+          PKG_CONFIG_LIBDIR: ${{ env.SYSROOT_PATH }}/usr/lib/aarch64-linux-gnu/pkgconfig:${{ env.SYSROOT_PATH }}/usr/share/pkgconfig
+          BINDGEN_EXTRA_CLANG_ARGS_aarch64_unknown_linux_gnu: "--target=aarch64-linux-gnu --sysroot=${{ env.SYSROOT_PATH }}"
+        run: cargo clippy --workspace --target aarch64-unknown-linux-gnu -- -D warnings
       - name: Build examples
+        env:
+          PKG_CONFIG_SYSROOT_DIR: ${{ env.SYSROOT_PATH }}
+          PKG_CONFIG_LIBDIR: ${{ env.SYSROOT_PATH }}/usr/lib/aarch64-linux-gnu/pkgconfig:${{ env.SYSROOT_PATH }}/usr/share/pkgconfig
+          BINDGEN_EXTRA_CLANG_ARGS_aarch64_unknown_linux_gnu: "--target=aarch64-linux-gnu --sysroot=${{ env.SYSROOT_PATH }}"
         run: cargo build --examples --target aarch64-unknown-linux-gnu --release
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
