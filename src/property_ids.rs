@@ -8,8 +8,7 @@ pub mod core {
         ControlId::new(1, "Location", ControlType::Int32, Direction::Out);
     pub const ROTATION: ControlId =
         ControlId::new(2, "Rotation", ControlType::Int32, Direction::Out);
-    pub const MODEL: ControlId =
-        ControlId::new(3, "Model", ControlType::String, Direction::Out);
+    pub const MODEL: ControlId = ControlId::new(3, "Model", ControlType::String, Direction::Out);
     pub const UNIT_CELL_SIZE: ControlId =
         ControlId::new(4, "UnitCellSize", ControlType::Size, Direction::Out);
     pub const PIXEL_ARRAY_SIZE: ControlId =

@@ -236,9 +236,8 @@ impl ControlList {
     pub fn get_u8_array(&self, id: &ControlId) -> Result<&[u8]> {
         let mut ptr = std::ptr::null();
         let mut count = 0usize;
-        let ok = unsafe {
-            ffi::lc_control_list_get_byte_array(self.ptr, id.id(), &mut ptr, &mut count)
-        };
+        let ok =
+            unsafe { ffi::lc_control_list_get_byte_array(self.ptr, id.id(), &mut ptr, &mut count) };
         if ok && !ptr.is_null() {
             Ok(unsafe { std::slice::from_raw_parts(ptr, count) })
         } else {
@@ -345,9 +344,7 @@ impl ControlList {
     /// Point 配列を設定する
     pub fn set_point_array(&mut self, id: &ControlId, values: &[Point]) {
         let raw: Vec<ffi::lc_point_t> = values.iter().map(|p| p.to_raw()).collect();
-        unsafe {
-            ffi::lc_control_list_set_point_array(self.ptr, id.id(), raw.as_ptr(), raw.len())
-        };
+        unsafe { ffi::lc_control_list_set_point_array(self.ptr, id.id(), raw.as_ptr(), raw.len()) };
     }
 }
 

@@ -9,8 +9,8 @@ mod controls;
 mod error;
 mod frame_buffer;
 mod geometry;
-mod property_ids;
 mod pixel_format;
+mod property_ids;
 mod request;
 mod stream;
 
