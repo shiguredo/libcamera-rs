@@ -1,7 +1,7 @@
 use crate::sys as ffi;
 
 use crate::error::{Error, Result};
-use crate::geometry::Rectangle;
+use crate::geometry::{Point, Rectangle, Size};
 
 /// コントロールの型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -144,6 +144,30 @@ impl ControlList {
         }
     }
 
+    /// 文字列値を取得する
+    pub fn get_string(&self, id: &ControlId) -> Result<&str> {
+        let mut ptr = std::ptr::null();
+        let mut len = 0usize;
+        let ok = unsafe { ffi::lc_control_list_get_string(self.ptr, id.id(), &mut ptr, &mut len) };
+        if ok && !ptr.is_null() {
+            let bytes = unsafe { std::slice::from_raw_parts(ptr.cast::<u8>(), len) };
+            std::str::from_utf8(bytes).map_err(|_| Error::ControlGetFailed)
+        } else {
+            Err(Error::ControlGetFailed)
+        }
+    }
+
+    /// Size 値を取得する
+    pub fn get_size(&self, id: &ControlId) -> Result<Size> {
+        let mut out = ffi::lc_size_t::default();
+        let ok = unsafe { ffi::lc_control_list_get_size(self.ptr, id.id(), &mut out) };
+        if ok {
+            Ok(Size::from_raw(out))
+        } else {
+            Err(Error::ControlGetFailed)
+        }
+    }
+
     /// Rectangle 値を取得する
     pub fn get_rectangle(&self, id: &ControlId) -> Result<Rectangle> {
         let mut out = ffi::lc_rectangle_t::default();
@@ -178,6 +202,74 @@ impl ControlList {
         };
         if ok && !ptr.is_null() {
             Ok(unsafe { std::slice::from_raw_parts(ptr, count) })
+        } else {
+            Err(Error::ControlGetFailed)
+        }
+    }
+
+    /// i64 配列を取得する
+    pub fn get_i64_array(&self, id: &ControlId) -> Result<&[i64]> {
+        let mut ptr = std::ptr::null();
+        let mut count = 0usize;
+        let ok = unsafe {
+            ffi::lc_control_list_get_int64_array(self.ptr, id.id(), &mut ptr, &mut count)
+        };
+        if ok && !ptr.is_null() {
+            Ok(unsafe { std::slice::from_raw_parts(ptr, count) })
+        } else {
+            Err(Error::ControlGetFailed)
+        }
+    }
+
+    /// u8 値を取得する
+    pub fn get_u8(&self, id: &ControlId) -> Result<u8> {
+        let mut out = 0u8;
+        let ok = unsafe { ffi::lc_control_list_get_byte(self.ptr, id.id(), &mut out) };
+        if ok {
+            Ok(out)
+        } else {
+            Err(Error::ControlGetFailed)
+        }
+    }
+
+    /// u8 配列を取得する
+    pub fn get_u8_array(&self, id: &ControlId) -> Result<&[u8]> {
+        let mut ptr = std::ptr::null();
+        let mut count = 0usize;
+        let ok =
+            unsafe { ffi::lc_control_list_get_byte_array(self.ptr, id.id(), &mut ptr, &mut count) };
+        if ok && !ptr.is_null() {
+            Ok(unsafe { std::slice::from_raw_parts(ptr, count) })
+        } else {
+            Err(Error::ControlGetFailed)
+        }
+    }
+
+    /// Rectangle 配列を取得する
+    pub fn get_rectangle_array(&self, id: &ControlId) -> Result<Vec<Rectangle>> {
+        let mut ptr: *const ffi::lc_rectangle_t = std::ptr::null();
+        let mut count = 0usize;
+        let ok = unsafe {
+            ffi::lc_control_list_get_rectangle_array(self.ptr, id.id(), &mut ptr, &mut count)
+        };
+        if ok && !ptr.is_null() {
+            let slice = unsafe { std::slice::from_raw_parts(ptr, count) };
+            Ok(slice.iter().map(|r| Rectangle::from_raw(*r)).collect())
+        } else {
+            Err(Error::ControlGetFailed)
+        }
+    }
+
+    /// Point 配列を取得する
+    pub fn get_point_array(&self, id: &ControlId) -> Result<Vec<Point>> {
+        let mut ptr: *const ffi::lc_point_t = std::ptr::null();
+        let mut count = 0usize;
+        let ok = unsafe {
+            ffi::lc_control_list_get_point_array(self.ptr, id.id(), &mut ptr, &mut count)
+        };
+        if ok && !ptr.is_null() {
+            let slice = unsafe { std::slice::from_raw_parts(ptr, count) };
+            Ok(slice.iter().map(|p| Point::from_raw(*p)).collect())
         } else {
             Err(Error::ControlGetFailed)
         }
@@ -220,6 +312,39 @@ impl ControlList {
         unsafe {
             ffi::lc_control_list_set_int32_array(self.ptr, id.id(), values.as_ptr(), values.len())
         };
+    }
+
+    /// i64 配列を設定する
+    pub fn set_i64_array(&mut self, id: &ControlId, values: &[i64]) {
+        unsafe {
+            ffi::lc_control_list_set_int64_array(self.ptr, id.id(), values.as_ptr(), values.len())
+        };
+    }
+
+    /// u8 値を設定する
+    pub fn set_u8(&mut self, id: &ControlId, value: u8) {
+        unsafe { ffi::lc_control_list_set_byte(self.ptr, id.id(), value) };
+    }
+
+    /// u8 配列を設定する
+    pub fn set_u8_array(&mut self, id: &ControlId, values: &[u8]) {
+        unsafe {
+            ffi::lc_control_list_set_byte_array(self.ptr, id.id(), values.as_ptr(), values.len())
+        };
+    }
+
+    /// Rectangle 配列を設定する
+    pub fn set_rectangle_array(&mut self, id: &ControlId, values: &[Rectangle]) {
+        let raw: Vec<ffi::lc_rectangle_t> = values.iter().map(|r| r.to_raw()).collect();
+        unsafe {
+            ffi::lc_control_list_set_rectangle_array(self.ptr, id.id(), raw.as_ptr(), raw.len())
+        };
+    }
+
+    /// Point 配列を設定する
+    pub fn set_point_array(&mut self, id: &ControlId, values: &[Point]) {
+        let raw: Vec<ffi::lc_point_t> = values.iter().map(|p| p.to_raw()).collect();
+        unsafe { ffi::lc_control_list_set_point_array(self.ptr, id.id(), raw.as_ptr(), raw.len()) };
     }
 }
 

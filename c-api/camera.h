@@ -20,6 +20,7 @@ lc_request_t* lc_camera_create_request(lc_camera_t* cam, uint64_t cookie);
 int lc_camera_queue_request(lc_camera_t* cam, lc_request_t* request);
 int lc_camera_start(lc_camera_t* cam);
 int lc_camera_stop(lc_camera_t* cam);
+lc_control_list_t* lc_camera_properties(const lc_camera_t* cam);
 void lc_camera_connect_request_completed(lc_camera_t* cam,
                                          lc_request_completed_cb cb,
                                          void* user_data);

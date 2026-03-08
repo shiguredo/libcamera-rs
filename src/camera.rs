@@ -1,6 +1,7 @@
 use crate::sys as ffi;
 
 use crate::configuration::CameraConfiguration;
+use crate::controls::ControlList;
 use crate::error::{Error, Result};
 use crate::request::{CompletedRequest, Request};
 use crate::stream::StreamRole;
@@ -95,6 +96,12 @@ impl Camera {
             return Err(Error::CreateRequestFailed);
         }
         Ok(Request::from_raw(req_ptr))
+    }
+
+    /// カメラのプロパティを取得する
+    pub fn properties(&self) -> ControlList {
+        let ptr = unsafe { ffi::lc_camera_properties(self.ptr) };
+        ControlList::from_raw(ptr, false)
     }
 
     /// リクエストをキューに入れる

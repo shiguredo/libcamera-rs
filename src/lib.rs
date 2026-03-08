@@ -10,6 +10,7 @@ mod error;
 mod frame_buffer;
 mod geometry;
 mod pixel_format;
+mod property_ids;
 mod request;
 mod stream;
 
@@ -18,6 +19,10 @@ pub use camera::Camera;
 pub use camera_manager::CameraManager;
 pub use configuration::{CameraConfiguration, ConfigStatus};
 pub use control_ids::{core, draft, rpi};
+pub mod properties {
+    pub use crate::property_ids::core;
+    pub use crate::property_ids::draft;
+}
 pub use controls::{ControlId, ControlList, ControlType, Direction};
 pub use error::{Error, Result};
 pub use frame_buffer::{FrameBuffer, FrameBufferPlane, FrameBufferRef, FrameMetadata, FrameStatus};

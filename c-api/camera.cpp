@@ -64,6 +64,13 @@ int lc_camera_stop(lc_camera_t* cam) {
   return cam->camera->stop();
 }
 
+lc_control_list_t* lc_camera_properties(const lc_camera_t* cam) {
+  auto lc_list = new lc_control_list();
+  lc_list->list = const_cast<ControlList*>(&cam->camera->properties());
+  lc_list->owned = false;
+  return lc_list;
+}
+
 void lc_camera_connect_request_completed(lc_camera_t* cam,
                                          lc_request_completed_cb cb,
                                          void* user_data) {
