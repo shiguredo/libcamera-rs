@@ -51,6 +51,10 @@ libcamera-rs/
 sudo apt install libcamera-dev
 ```
 
+### Dev Containers
+
+Dev Containers を使えば macOS arm64 でもクロスコンパイルによるビルドが可能です。
+
 ## 使い方
 
 ### カメラの列挙
