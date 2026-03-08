@@ -150,7 +150,7 @@ impl ControlList {
         let mut len = 0usize;
         let ok = unsafe { ffi::lc_control_list_get_string(self.ptr, id.id(), &mut ptr, &mut len) };
         if ok && !ptr.is_null() {
-            let bytes = unsafe { std::slice::from_raw_parts(ptr as *const u8, len) };
+            let bytes = unsafe { std::slice::from_raw_parts(ptr.cast::<u8>(), len) };
             std::str::from_utf8(bytes).map_err(|_| Error::ControlGetFailed)
         } else {
             Err(Error::ControlGetFailed)
