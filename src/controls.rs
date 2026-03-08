@@ -261,6 +261,21 @@ impl ControlList {
         }
     }
 
+    /// Point 配列を取得する
+    pub fn get_point_array(&self, id: &ControlId) -> Result<Vec<Point>> {
+        let mut ptr: *const ffi::lc_point_t = std::ptr::null();
+        let mut count = 0usize;
+        let ok = unsafe {
+            ffi::lc_control_list_get_point_array(self.ptr, id.id(), &mut ptr, &mut count)
+        };
+        if ok && !ptr.is_null() {
+            let slice = unsafe { std::slice::from_raw_parts(ptr, count) };
+            Ok(slice.iter().map(|p| Point::from_raw(*p)).collect())
+        } else {
+            Err(Error::ControlGetFailed)
+        }
+    }
+
     /// bool 値を設定する
     pub fn set_bool(&mut self, id: &ControlId, value: bool) {
         unsafe { ffi::lc_control_list_set_bool(self.ptr, id.id(), value) };
@@ -325,21 +340,6 @@ impl ControlList {
         unsafe {
             ffi::lc_control_list_set_rectangle_array(self.ptr, id.id(), raw.as_ptr(), raw.len())
         };
-    }
-
-    /// Point 配列を取得する
-    pub fn get_point_array(&self, id: &ControlId) -> Result<Vec<Point>> {
-        let mut ptr: *const ffi::lc_point_t = std::ptr::null();
-        let mut count = 0usize;
-        let ok = unsafe {
-            ffi::lc_control_list_get_point_array(self.ptr, id.id(), &mut ptr, &mut count)
-        };
-        if ok && !ptr.is_null() {
-            let slice = unsafe { std::slice::from_raw_parts(ptr, count) };
-            Ok(slice.iter().map(|p| Point::from_raw(*p)).collect())
-        } else {
-            Err(Error::ControlGetFailed)
-        }
     }
 
     /// Point 配列を設定する
