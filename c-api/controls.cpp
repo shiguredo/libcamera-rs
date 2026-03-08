@@ -88,9 +88,9 @@ bool lc_control_list_get_float(const lc_control_list_t* list,
 }
 
 bool lc_control_list_get_string(const lc_control_list_t* list,
-                               unsigned int id,
-                               const char** out,
-                               size_t* len) {
+                                unsigned int id,
+                                const char** out,
+                                size_t* len) {
   if (!list->list->contains(id)) {
     return false;
   }
@@ -334,10 +334,10 @@ void lc_control_list_set_rectangle_array(lc_control_list_t* list,
   std::vector<Rectangle> rects;
   rects.reserve(count);
   for (size_t i = 0; i < count; i++) {
-    rects.emplace_back(values[i].x, values[i].y,
-                       values[i].width, values[i].height);
+    rects.emplace_back(values[i].x, values[i].y, values[i].width,
+                       values[i].height);
   }
-  ControlValue cv(Span<const Rectangle>(rects));
+  ControlValue cv{Span<const Rectangle>(rects)};
   list->list->set(id, cv);
 }
 
@@ -350,6 +350,6 @@ void lc_control_list_set_point_array(lc_control_list_t* list,
   for (size_t i = 0; i < count; i++) {
     points.emplace_back(values[i].x, values[i].y);
   }
-  ControlValue cv(Span<const Point>(points));
+  ControlValue cv{Span<const Point>(points)};
   list->list->set(id, cv);
 }
