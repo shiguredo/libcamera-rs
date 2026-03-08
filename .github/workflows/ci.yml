@@ -33,7 +33,8 @@ jobs:
             libclang-dev \
             clang \
             debian-archive-keyring \
-            gcc-aarch64-linux-gnu
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu
           # cargo-shiguredo-sysroot は独自 apt 設定で sources.list のみ差し替えるため、
           # Debian の keyring を trusted.gpg.d に配置しないと trixie の署名検証に失敗する。
           sudo install -Dm644 /usr/share/keyrings/debian-archive-keyring.gpg \
