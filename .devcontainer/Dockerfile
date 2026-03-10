@@ -31,4 +31,4 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup target add aarch64-unknown-linux-gnu
 
 # cargo-shiguredo-sysroot をインストールする
-RUN cargo install --git https://github.com/shiguredo/cargo-sysroot.git
+RUN cargo install shiguredo_sysroot

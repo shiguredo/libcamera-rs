@@ -45,7 +45,7 @@ jobs:
           sudo install -Dm644 /usr/share/keyrings/raspberrypi-archive-keyring.gpg \
             /etc/apt/trusted.gpg.d/raspberrypi-archive-keyring.gpg
       - name: Install cargo-shiguredo-sysroot
-        run: cargo install --git https://github.com/shiguredo/cargo-sysroot.git
+        run: cargo install shiguredo_sysroot
       - name: Install sysroot
         run: cargo shiguredo-sysroot --config sysroot/raspberry-pi-os_armv8.json
       - run: cargo fmt --all --check
