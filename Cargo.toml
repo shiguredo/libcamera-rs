@@ -3,7 +3,6 @@ name = "shiguredo_libcamera"
 version = "2026.1.0-canary.1"
 edition = "2024"
 rust-version = "1.88"
-authors = ["Shiguredo Inc."]
 license = "Apache-2.0"
 description = "Rust bindings for libcamera"
 homepage = "https://github.com/shiguredo/libcamera-rs"
