@@ -1,4 +1,4 @@
-.PHONY: sysroot test cover pbt pbt-cover fuzz fuzzing fuzzing-parallel fuzzing-list check clippy fmt clean
+.PHONY: sysroot test cover pbt pbt-cover fuzz fuzzing fuzzing-parallel fuzzing-list check clippy fmt clean container-build
 
 # sysroot を構築する
 sysroot:
@@ -60,3 +60,10 @@ fmt:
 # ビルド成果物を削除する
 clean:
 	cargo clean
+
+# macOS から prek の cargo clippy を Linux コンテナで動かすためのイメージをビルドする
+# 使い方:
+#   make container-build  (初回・Dockerfile.check 更新時に実行)
+#   prek run cargo-clippy (コンテナ上で aarch64 ターゲットの clippy が走る)
+container-build:
+	container build -t libcamera-rs-check -f Dockerfile.check .

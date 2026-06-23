@@ -28,12 +28,22 @@ RUN curl -fsSL http://archive.raspberrypi.com/debian/pool/main/r/raspberrypi-arc
 RUN install -Dm644 /usr/share/keyrings/raspberrypi-archive-keyring.gpg \
     /etc/apt/trusted.gpg.d/raspberrypi-archive-keyring.gpg
 
-COPY . /workspace
-WORKDIR /workspace
+# sysroot 構築に必要な最小限のメタ情報だけを image に焼き込む
+# (src/, build.rs, c-api/ などの実体は実行時に bind mount するためここではコピーしない)
+# Cargo.toml / Cargo.lock は cargo shiguredo-sysroot が内部で呼ぶ cargo metadata に必要
+COPY Cargo.toml Cargo.lock /opt/sysroot-src/
+COPY sysroot/ /opt/sysroot-src/sysroot/
+WORKDIR /opt/sysroot-src
+
+# cargo metadata が "no targets specified" や build.rs 不在で失敗しないよう
+# ダミーの src/lib.rs と build.rs を置く (実行時には bind mount で上書きされる)
+RUN mkdir -p src \
+    && : > src/lib.rs \
+    && echo "fn main() {}" > build.rs
 
 RUN cargo shiguredo-sysroot --config sysroot/raspberry-pi-os_armv8.json
 
-ENV SYSROOT_PATH=/workspace/target/shiguredo-sysroot/raspberry-pi-os_armv8/sysroot
+ENV SYSROOT_PATH=/opt/sysroot-src/target/shiguredo-sysroot/raspberry-pi-os_armv8/sysroot
 ENV PKG_CONFIG_ALLOW_CROSS=1
 ENV PKG_CONFIG_SYSROOT_DIR=${SYSROOT_PATH}
 ENV PKG_CONFIG_LIBDIR=${SYSROOT_PATH}/usr/lib/aarch64-linux-gnu/pkgconfig:${SYSROOT_PATH}/usr/share/pkgconfig
@@ -42,5 +52,8 @@ ENV CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
 ENV CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
 ENV RUSTFLAGS="-Clink-arg=--sysroot=${SYSROOT_PATH}"
+
+# 実行時の作業ディレクトリ (ここに host のソースを bind mount する想定)
+WORKDIR /workspace
 
 CMD ["cargo", "clippy", "--workspace", "--target", "aarch64-unknown-linux-gnu", "--", "-D", "warnings"]
