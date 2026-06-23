@@ -1,0 +1,46 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libclang-dev \
+    clang \
+    debian-archive-keyring \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    pkg-config \
+    curl \
+    ca-certificates \
+    git
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN rustup target add aarch64-unknown-linux-gnu
+
+RUN cargo install shiguredo_sysroot
+
+# Debian / Raspberry Pi の署名検証を有効にするため keyring を trusted.gpg.d に配置する
+RUN install -Dm644 /usr/share/keyrings/debian-archive-keyring.gpg \
+    /etc/apt/trusted.gpg.d/debian-archive-keyring.gpg
+RUN curl -fsSL http://archive.raspberrypi.com/debian/pool/main/r/raspberrypi-archive-keyring/raspberrypi-archive-keyring_2021.1.1+rpt1_all.deb \
+    -o /tmp/rpi-keyring.deb && dpkg -i /tmp/rpi-keyring.deb && rm /tmp/rpi-keyring.deb
+RUN install -Dm644 /usr/share/keyrings/raspberrypi-archive-keyring.gpg \
+    /etc/apt/trusted.gpg.d/raspberrypi-archive-keyring.gpg
+
+COPY . /workspace
+WORKDIR /workspace
+
+RUN cargo shiguredo-sysroot --config sysroot/raspberry-pi-os_armv8.json
+
+ENV SYSROOT_PATH=/workspace/target/shiguredo-sysroot/raspberry-pi-os_armv8/sysroot
+ENV PKG_CONFIG_ALLOW_CROSS=1
+ENV PKG_CONFIG_SYSROOT_DIR=${SYSROOT_PATH}
+ENV PKG_CONFIG_LIBDIR=${SYSROOT_PATH}/usr/lib/aarch64-linux-gnu/pkgconfig:${SYSROOT_PATH}/usr/share/pkgconfig
+ENV BINDGEN_EXTRA_CLANG_ARGS_aarch64_unknown_linux_gnu="--target=aarch64-linux-gnu --sysroot=${SYSROOT_PATH}"
+ENV CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+ENV CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+ENV RUSTFLAGS="-Clink-arg=--sysroot=${SYSROOT_PATH}"
+
+CMD ["cargo", "clippy", "--workspace", "--target", "aarch64-unknown-linux-gnu", "--", "-D", "warnings"]

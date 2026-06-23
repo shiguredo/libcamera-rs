@@ -1,0 +1,55 @@
+fail_fast = true
+
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "mixed-line-ending" },
+  { id = "check-toml" },
+  { id = "check-yaml" },
+  { id = "check-merge-conflict" },
+  { id = "check-added-large-files" },
+  { id = "detect-private-key" },
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "cargo-fmt",
+    name = "cargo fmt",
+    entry = "cargo fmt --all -- --check",
+    language = "system",
+    types = ["rust"],
+    pass_filenames = false,
+    priority = 0,
+  },
+  {
+    id = "clang-format",
+    name = "clang-format",
+    entry = "clang-format --dry-run --Werror",
+    language = "system",
+    types_or = ["c", "c++"],
+    files = "^c-api/",
+    priority = 5,
+  },
+  {
+    id = "cargo-clippy",
+    name = "cargo clippy",
+    entry = "container run --rm libcamera-rs-check",
+    language = "system",
+    types = ["rust"],
+    pass_filenames = false,
+    priority = 10,
+  },
+  {
+    id = "cargo-test",
+    name = "cargo test",
+    entry = "container run --rm libcamera-rs-check cargo test --workspace --target aarch64-unknown-linux-gnu",
+    language = "system",
+    types = ["rust"],
+    pass_filenames = false,
+    priority = 20,
+  },
+]
