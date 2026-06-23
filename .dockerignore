@@ -1,0 +1,4 @@
+.git
+.cargo/
+target/
+*.md

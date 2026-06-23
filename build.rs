@@ -21,6 +21,19 @@ fn main() {
         build.include(path);
     }
 
+    // クロスコンパイル時は sysroot を指定する
+    let target = env::var("TARGET").unwrap();
+    let host = env::var("HOST").unwrap();
+    if target != host {
+        let sysroot =
+            env::var("SYSROOT_PATH").expect("SYSROOT_PATH must be set for cross compilation");
+        build.flag(format!("--sysroot={}", sysroot));
+        println!(
+            "cargo::rustc-link-search=native={}/usr/lib/aarch64-linux-gnu",
+            sysroot
+        );
+    }
+
     // 全 .cpp ファイルをコンパイル
     let cpp_files = [
         "camera_manager.cpp",

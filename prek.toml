@@ -37,7 +37,7 @@ hooks = [
   {
     id = "cargo-clippy",
     name = "cargo clippy",
-    entry = "cargo clippy --workspace --all-targets -- -D warnings",
+    entry = "container run --rm libcamera-rs-check",
     language = "system",
     types = ["rust"],
     pass_filenames = false,
@@ -46,7 +46,7 @@ hooks = [
   {
     id = "cargo-test",
     name = "cargo test",
-    entry = "cargo test --workspace",
+    entry = "container run --rm libcamera-rs-check cargo test --workspace --target aarch64-unknown-linux-gnu",
     language = "system",
     types = ["rust"],
     pass_filenames = false,

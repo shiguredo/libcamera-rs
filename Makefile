@@ -1,4 +1,8 @@
-.PHONY: test cover pbt pbt-cover fuzz fuzzing fuzzing-parallel fuzzing-list check clippy fmt clean
+.PHONY: sysroot test cover pbt pbt-cover fuzz fuzzing fuzzing-parallel fuzzing-list check clippy fmt clean
+
+# sysroot を構築する
+sysroot:
+	cargo shiguredo-sysroot --config sysroot/raspberry-pi-os_armv8.json
 
 # 全テストを実行する
 test:
