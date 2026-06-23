@@ -14,7 +14,7 @@ links = "libcamera_c"
 
 [build-dependencies]
 bindgen = "0.72"
-cc = "1"
+cc = "1.2"
 pkg-config = "0.3"
 
 [dev-dependencies]
