@@ -21,7 +21,7 @@ description: 時雨堂の libcamera Rust バインディング shiguredo_libcame
 - crate 名: `shiguredo_libcamera`
 - バージョン: 2026.1.0
 - Rust Edition: 2024
-- 最小 Rust バージョン: 1.88
+- 最小 Rust バージョン: 1.93
 - ライセンス: Apache-2.0
 - 対応 libcamera: **v0.7.0+rpt20260205** (動的リンク先のバージョンが互換でないと動作しない可能性あり)
 
