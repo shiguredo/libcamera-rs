@@ -1,6 +1,7 @@
 #include "controls.h"
 #include "internal.h"
 
+#include <span>
 #include <string_view>
 
 void lc_control_list_ref_destroy(lc_control_list_t* list) {
@@ -299,7 +300,7 @@ void lc_control_list_set_byte_array(lc_control_list_t* list,
                                     unsigned int id,
                                     const uint8_t* values,
                                     size_t count) {
-  ControlValue cv(Span<const uint8_t>(values, count));
+  ControlValue cv(std::span<const uint8_t>(values, count));
   list->list->set(id, cv);
 }
 
@@ -307,7 +308,7 @@ void lc_control_list_set_int32_array(lc_control_list_t* list,
                                      unsigned int id,
                                      const int32_t* values,
                                      size_t count) {
-  ControlValue cv(Span<const int32_t>(values, count));
+  ControlValue cv(std::span<const int32_t>(values, count));
   list->list->set(id, cv);
 }
 
@@ -315,7 +316,7 @@ void lc_control_list_set_int64_array(lc_control_list_t* list,
                                      unsigned int id,
                                      const int64_t* values,
                                      size_t count) {
-  ControlValue cv(Span<const int64_t>(values, count));
+  ControlValue cv(std::span<const int64_t>(values, count));
   list->list->set(id, cv);
 }
 
@@ -323,7 +324,7 @@ void lc_control_list_set_float_array(lc_control_list_t* list,
                                      unsigned int id,
                                      const float* values,
                                      size_t count) {
-  ControlValue cv(Span<const float>(values, count));
+  ControlValue cv(std::span<const float>(values, count));
   list->list->set(id, cv);
 }
 
@@ -337,7 +338,7 @@ void lc_control_list_set_rectangle_array(lc_control_list_t* list,
     rects.emplace_back(values[i].x, values[i].y, values[i].width,
                        values[i].height);
   }
-  ControlValue cv{Span<const Rectangle>(rects)};
+  ControlValue cv{std::span<const Rectangle>(rects)};
   list->list->set(id, cv);
 }
 
@@ -350,6 +351,6 @@ void lc_control_list_set_point_array(lc_control_list_t* list,
   for (size_t i = 0; i < count; i++) {
     points.emplace_back(values[i].x, values[i].y);
   }
-  ControlValue cv{Span<const Point>(points)};
+  ControlValue cv{std::span<const Point>(points)};
   list->list->set(id, cv);
 }
