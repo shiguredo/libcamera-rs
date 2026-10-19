@@ -15,7 +15,7 @@ fn main() {
 
     // C++ ラッパーをコンパイル
     let mut build = cc::Build::new();
-    build.cpp(true).std("c++17").include(&c_api_dir);
+    build.cpp(true).std("c++20").include(&c_api_dir);
 
     for path in &libcamera.include_paths {
         build.include(path);

@@ -81,6 +81,10 @@ fn main() {
         }
     };
 
+    // 取得できるフレーム数は確保したバッファ数を超えないため、待機目標をバッファ数で頭打ちにする。
+    // これをしないと、バッファ数より多いフレーム数を待ち続けてハングする。
+    let target_frame_count = CAPTURE_FRAME_COUNT.min(buffer_count);
+
     struct FrameInfo {
         sequence: u32,
         timestamp: u64,
@@ -152,7 +156,7 @@ fn main() {
             eprintln!("フレームデータのロックに失敗しました");
             std::process::exit(1);
         };
-        if guard.len() >= CAPTURE_FRAME_COUNT {
+        if guard.len() >= target_frame_count {
             break;
         }
     }
@@ -173,7 +177,7 @@ fn main() {
         f.set_spacing(true);
         f.object(|f| {
             f.member("camera_id", camera.id())?;
-            f.member("requested_frames", CAPTURE_FRAME_COUNT)?;
+            f.member("requested_frames", target_frame_count)?;
             f.member("captured_frames", guard.len())?;
             f.member(
                 "frames",

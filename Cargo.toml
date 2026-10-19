@@ -1,8 +1,8 @@
 [package]
 name = "shiguredo_libcamera"
-version = "2026.1.0"
+version = "2026.2.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.93"
 description = "Rust bindings for libcamera"
 readme = "README.md"
 homepage = "https://github.com/shiguredo/libcamera-rs"

@@ -17,7 +17,7 @@ Please read <https://github.com/shiguredo/oss> before use.
 ## 対応 libcamera バージョン
 
 > [!IMPORTANT]
-> **libcamera v0.7.0+rpt20260205**
+> **libcamera v0.7.2+rpt20261009**
 >
 > libcamera は動的リンクで利用しています。上記バージョンと互換性のない libcamera がインストールされている環境では正常に動作しない可能性があります。
 

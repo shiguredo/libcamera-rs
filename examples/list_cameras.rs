@@ -43,21 +43,20 @@ fn main() {
 
         let mut streams = Vec::new();
 
-        if let Ok(mut config) = camera.generate_configuration(&[StreamRole::Viewfinder]) {
-            if let Ok(status) = config.validate() {
-                if status != ConfigStatus::Invalid {
-                    for j in 0..config.size() as u32 {
-                        if let Ok(sc) = config.at(j) {
-                            let pixel_format = sc.pixel_format().to_string();
-                            let size = sc.size();
-                            streams.push(StreamInfo {
-                                pixel_format,
-                                width: size.width,
-                                height: size.height,
-                                buffer_count: sc.buffer_count(),
-                            });
-                        }
-                    }
+        if let Ok(mut config) = camera.generate_configuration(&[StreamRole::Viewfinder])
+            && let Ok(status) = config.validate()
+            && status != ConfigStatus::Invalid
+        {
+            for j in 0..config.size() as u32 {
+                if let Ok(sc) = config.at(j) {
+                    let pixel_format = sc.pixel_format().to_string();
+                    let size = sc.size();
+                    streams.push(StreamInfo {
+                        pixel_format,
+                        width: size.width,
+                        height: size.height,
+                        buffer_count: sc.buffer_count(),
+                    });
                 }
             }
         }
