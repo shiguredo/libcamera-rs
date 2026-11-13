@@ -11,6 +11,9 @@
 
 ## develop
 
+- [FIX] lc_camera_manager_get_camera_by_id に NULL を渡すとクラッシュする問題を修正する
+  - @Hexa
+
 ## 2026.2.0
 
 **リリース日**: 2026-10-19
