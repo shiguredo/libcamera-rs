@@ -1,34 +1,37 @@
-# CameraManager の create / destroy 廃止に追従する
+# CameraManager のライフサイクルが libcamera v0.8.0 の契約に適合しているか確認する
 
 - Created: 2026-11-13
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-11-13
 - Branch: feature/change-camera-manager-lifecycle
 - Polished: {YYYY-MM-DD}
 
 ## 目的
 
-libcamera v0.8.0+rpt20261104 の `include/libcamera/camera_manager.h` では、これまで存在した
-`static CameraManager *create()` と `static void destroy(CameraManager *cm)` が廃止され、
-コンストラクタ `CameraManager()` とデストラクタ `~CameraManager()` を直接使う形になった。
-本リポジトリの `c-api/camera_manager.cpp` は `lc_camera_manager_create` / `lc_camera_manager_destroy` の中で
-`std::make_unique<CameraManager>()` を呼んでいるため、この点だけでは v0.8.0 でもそのままコンパイルできるように見える。
-しかし `CameraManager` の生成・破棄の扱いが変わること、およびカメラ列挙の取得経路が
-`cameras()` (内部をコピーして返す) から `cameras() const` の値返しへ明確化されたことを踏まえ、
-ライフサイクル管理が v0.8.0 の契約に適合しているか確認と修正が必要である。
+libcamera v0.8.0+rpt20261104 への追従にあたり、本リポジトリの `CameraManager` の扱いが
+v0.8.0 の `include/libcamera/camera_manager.h` の契約に適合しているかを確認する。
+
+**libcamera v0.8.0 では `CameraManager` の API は変化していない。**
+v0.6.0+rpt20251202 / v0.7.0+rpt20260205 / v0.7.2+rpt20261009 / v0.8.0+rpt20261104 の `camera_manager.h` は
+943 バイトで内容が完全に一致しており、`cameras()` のシグネチャも `get()` のシグネチャも変わっていない。
+
+したがって本 issue は v0.8.0 追従のための変更作業ではなく、現行実装が v0.8.0 の契約に適合しているかを確認し、
+その結果を記録するものである。
 
 ## 現状
 
 `c-api/camera_manager.cpp` の実装は次のとおり。
 
-- `lc_camera_manager_create` が `new lc_camera_manager()` の後、`std::make_unique<CameraManager>()` を代入している
+- `lc_camera_manager_create` が `new lc_camera_manager()` の後、`std::make_unique<CameraManager>()` を代入している。
+  これは `CameraManager` のコンストラクタを直接呼ぶ形であり、v0.8.0 の契約に適合している
 - `lc_camera_manager_destroy` が `delete mgr` のみを行う。`lc_camera_manager` は `std::unique_ptr<CameraManager>` を保持しているため、
   unique_ptr のデストラクタで `CameraManager` のデストラクタが呼ばれる
-- `lc_camera_manager_cameras_count` が `mgr->cm->cameras().size()` を返す。呼び出しごとに `std::vector` がコピーされる
-- `lc_camera_manager_get_camera` が `cameras()` を呼んでからインデックスでアクセスしている
+- `lc_camera_manager_cameras_count` が `mgr->cm->cameras().size()` を返す
+- `lc_camera_manager_get_camera` が `auto cameras = mgr->cm->cameras();` で 1 回取得し、インデックスを検証している
 - `lc_camera_manager_get_camera_by_id` が `mgr->cm->get(id)` を呼んでいる
 
 `src/camera_manager.rs` の `CameraManager::new` は C ABI の `lc_camera_manager_create` と
-`lc_camera_manager_start` を呼び、`Drop` で `lc_camera_manager_stop` と `lc_camera_manager_destroy` を呼ぶ。
+`lc_camera_manager_start` を呼び、`start` が失敗した場合は `lc_camera_manager_destroy` を呼んでからエラーを返す。
+`Drop` で `lc_camera_manager_stop` と `lc_camera_manager_destroy` を呼ぶ。ライフサイクルの解放漏れはない。
 
 v0.8.0 の `camera_manager.h` の該当部分は次のとおり。
 
@@ -43,30 +46,54 @@ v0.8.0 の `camera_manager.h` の該当部分は次のとおり。
  std::shared_ptr<Camera> get(std::string_view id);
 ```
 
+`camera_manager.h` が v0.6.0 以降変化していないため、`c-api/camera_manager.cpp` は v0.8.0 でもそのままコンパイルできる。
+`git log -- c-api/camera_manager.cpp` の結果は初回インポートの 1 件のみであり、v0.7.2 追従のコミットでもこのファイルは変更されていない。
+
 ## 設計方針
 
-- `CameraManager` の生成と破棄は、v0.8.0 のコンストラクタとデストラクタにそのまま委ねる。
-  `lc_camera_manager` が `std::unique_ptr<CameraManager>` を持つ現状の構造は維持する
-- `get(std::string_view id)` に変わったことへ追従する。`const char*` から `std::string_view` への暗黙変換で足りるが、
-  `nullptr` が渡された場合に未定義動作になるため、`lc_camera_manager_get_camera_by_id` で `id == nullptr` を明示的に弾く
-- `cameras()` が毎回 `std::vector` を返すため、`lc_camera_manager_get_camera` のようにインデックス指定で都度呼ぶ実装は、
-  カメラ数の多い環境で不要なコピーを繰り返す。v0.8.0 追従の範囲内で、取得処理を 1 回の `cameras()` 呼び出しに留める形へ寄せる
-- Rust 側の公開 API (`CameraManager::new` / `cameras_count` / `get_camera` / `get_camera_by_id`) のシグネチャは変えない
-- C ABI の関数名とシグネチャは変えない。`create` / `destroy` という名前は本リポジトリの C ABI の名前であり、
-  libcamera の廃止された static メソッドとは別物であるため改名しない
+### 変更対象
+
+本 issue ではコードを変更しない。
+確認の結果をこの issue に記録し、closed にする。
+
+`c-api/`、`src/`、`examples/` はいずれも変更しない。
+`CHANGES.md` への追記は行わない。公開 API のシグネチャと挙動が変わらないためである。
+
+### 確認した内容
+
+- `lc_camera_manager_create` / `lc_camera_manager_destroy` が v0.8.0 のコンストラクタとデストラクタに委ねていること
+- `src/camera_manager.rs` の `CameraManager::new` が `start` 失敗時に確実に解放していること
+- カメラ列挙の取得経路が v0.8.0 の `cameras()` の契約と整合すること
+
+### 実装上の改善候補 (本 issue の範囲外)
+
+レビューで次の 2 点が見つかったが、いずれも v0.8.0 追従を根拠とする作業ではなく、本 issue の目的に含めない。
+
+- `lc_camera_manager_get_camera_by_id` は `id == nullptr` を検証していない。
+  `std::string_view` に `nullptr` を渡すと `std::char_traits::length` が未定義動作になり、実際にクラッシュする。
+  ただし Rust 側の `get_camera_by_id` は `CString::as_ptr()` を渡すため到達できず、影響するのは C ABI を直接使う利用者だけである。
+  `get()` 自体が `std::string_view` を受け取るのは v0.5.0+rpt20250429 からの変化であり、v0.8.0 とは無関係である
+- `lc_camera_manager_cameras_count` は呼び出しごとに `std::vector` をコピーする。
+  `lc_camera_manager_get_camera` は既に `cameras()` を 1 回しか呼んでいない。
+  削減するなら C ABI の一括取得 API の追加が必要であり、性能改善として別に判断すべき内容である
+
+これらが必要になった時点で、それぞれ別の issue として起票する。
 
 ## 完了条件
 
-- v0.8.0 のヘッダーに対して `c-api/camera_manager.cpp` がコンパイルできる
-- `lc_camera_manager_get_camera_by_id` に `nullptr` を渡した場合に、クラッシュせず `nullptr` を返す
-- `lc_camera_manager_get_camera` が `cameras()` を複数回呼ばない
-- 実機 Raspberry Pi 上で `list_cameras` サンプルが従来どおり動作する
-- `cargo clippy --workspace --all-targets --target aarch64-unknown-linux-gnu -- -D warnings` が通る
+- `camera_manager.h` が v0.6.0 から v0.8.0 まで変化していないことを確認している
+- `c-api/camera_manager.cpp` が v0.8.0 のヘッダーでコンパイルできることを確認している
+- `src/camera_manager.rs` の `CameraManager::new` と `Drop` に解放漏れが無いことを確認している
 
 ## 解決方法
 
-- `c-api/camera_manager.cpp` の `lc_camera_manager_create` は `std::make_unique<CameraManager>()` のままとし、
-  v0.8.0 で廃止された `CameraManager::create()` / `destroy()` を新たに使わないよう確認する
-- `lc_camera_manager_get_camera_by_id` の先頭で `if (id == nullptr) { return nullptr; }` を追加する
-- `lc_camera_manager_get_camera` は `const auto cameras = mgr->cm->cameras();` の結果を 1 回だけ取得してインデックスを検証する形に整える
-- コメントは日本語、ログメッセージは英語で書く
+コード変更を行わずに closed にする。理由は次のとおり。
+
+- 起票時の目的は「libcamera v0.8.0 で `static CameraManager *create()` と `static void destroy(CameraManager *cm)` が廃止されたことへの追従」であったが、これは事実誤認であった
+- `create()` / `destroy()` は v0.3.2+rpt20241119 / v0.4.0+rpt20250213 / v0.5.2+rpt20250903 / v0.6.0+rpt20251202 / v0.7.2+rpt20261009 / v0.8.0+rpt20261104 のいずれの `camera_manager.h` にも存在しない。廃止されたのではなく、存在したことがない
+- `get()` が `std::string_view` を受け取るようになったのは v0.5.0+rpt20250429 であり、本リポジトリは v0.7.2 追従の 2026.2.0 で既にこの変化を取り込んでいる
+- `cameras()` のシグネチャは全バージョンで `std::vector<std::shared_ptr<Camera>> cameras() const;` のままであり、v0.8.0 で変化していない
+- 現行の `c-api/camera_manager.cpp` は `std::make_unique<CameraManager>()` でコンストラクタを直接呼び、unique_ptr のデストラクタで破棄しており、v0.8.0 の契約に適合している。`src/camera_manager.rs` の `CameraManager::new` は `start` 失敗時に明示的に解放しており、`Drop` での解放も揃っている
+- `lc_camera_manager_get_camera` は既に `cameras()` を 1 回しか呼んでおらず、完了条件として挙げていた改善は現状で成立している
+- したがって v0.8.0 追従として本 issue で対応すべき作業は存在しない
+- `lc_camera_manager_get_camera_by_id` の `id == nullptr` 検証と `lc_camera_manager_cameras_count` のコピー削減は、v0.8.0 追従ではなく別目的の改善である。`id == nullptr` によるクラッシュは実際に発生するため、不具合として別 issue を起票した。`cameras_count` のコピー削減は性能改善であり、必要性が確認されていないため起票しない
