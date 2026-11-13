@@ -1,7 +1,7 @@
 # ControlId に vendor / 配列長 / 列挙子のメタデータを追加する
 
 - Created: 2026-11-13
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-11-13
 - Branch: feature/change-control-id-vendor-size
 - Polished: 2026-11-13
 
@@ -119,3 +119,39 @@ ID の不一致 (rpi の `CnnOutputTensor` 以降など) は、コントロー�
 - `enumerators` は、既存の列挙値モジュールの定数名を SCREAMING_SNAKE_CASE から元の CamelCase に戻した名前で登録する
   (例: `PN9` は `"Pn9"`、`CUSTOM1` は `"Custom1"`)。名前の出所は libcamera の YAML の `name` と一致させる
 - `CHANGES.md` の `develop` セクションに `[CHANGE]` を追加する。担当者行を含め、`shiguredo-changelog` の書式に従う
+
+## 解決方法 (実績)
+
+`src/controls.rs` の `ControlId` に `vendor` / `array_length` / `enumerators` を追加し、
+`ControlId::new` を 7 引数に拡張した。`const fn` は維持している。
+getter として `vendor()` / `array_length()` / `enumerators()` を追加した。
+
+`src/control_ids.rs` の 80 個と `src/property_ids.rs` の 11 個の定数を新しいシグネチャで書き換えた。
+`c-api/` は変更していない。
+
+### メタデータの出所
+
+libcamera v0.8.0+rpt20261104 の `src/libcamera` にある YAML から取得した。
+
+- `control_ids_core.yaml` / `control_ids_draft.yaml` / `control_ids_rpi.yaml`
+- `property_ids_core.yaml` / `property_ids_draft.yaml`
+
+`size: [n]` は可変長として `Some(0)`、`size: [3,3]` は要素数の積として `Some(9)` とした。
+`enumerators` の名前は YAML の `name` をそのまま使い、値は YAML の `value` をそのまま使った。
+
+### 削除済み定数の扱い
+
+`PIXEL_ARRAY_SIZE` と `PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES` は v0.8.0 の YAML に存在しないが、
+本 issue は既存の定数を削除しない方針であるため、そのまま残してメタデータを付与した。
+メタデータは libcamera v0.6.0 の `property_ids_core.yaml` に基づく。
+これら 2 つの削除はプロパティの追加削除を扱う別 issue の範囲である。
+
+### 検証結果
+
+- `src/control_ids.rs` は 80 個、`src/property_ids.rs` は 11 個のままで、定数名の増減は無い
+- 既存の定数の ID・名前・型・方向に差分が無いことを、書き換え前後で機械的に比較して確認した
+- `ControlId` の const 構築、3 つの getter、`Some(0)` と `Some(9)` と `None` の区別、
+  列挙子を持つ場合と持たない場合を、単体のプログラムで確認した
+- `cargo fmt --all -- --check` が通る
+
+`cargo clippy` と実際のビルドは、この環境に libcamera と aarch64 向けの sysroot が無いため実行していない。
