@@ -4,37 +4,96 @@ use crate::controls::{ControlId, ControlType, Direction};
 pub mod core {
     use super::*;
 
-    pub const LOCATION: ControlId =
-        ControlId::new(1, "Location", ControlType::Int32, Direction::Out);
-    pub const ROTATION: ControlId =
-        ControlId::new(2, "Rotation", ControlType::Int32, Direction::Out);
-    pub const MODEL: ControlId = ControlId::new(3, "Model", ControlType::String, Direction::Out);
-    pub const UNIT_CELL_SIZE: ControlId =
-        ControlId::new(4, "UnitCellSize", ControlType::Size, Direction::Out);
-    pub const PIXEL_ARRAY_SIZE: ControlId =
-        ControlId::new(5, "PixelArraySize", ControlType::Size, Direction::Out);
+    pub const LOCATION: ControlId = ControlId::new(
+        1,
+        "Location",
+        ControlType::Int32,
+        Direction::Out,
+        "libcamera",
+        None,
+        &[(0, "Front"), (1, "Back"), (2, "External")],
+    );
+    pub const ROTATION: ControlId = ControlId::new(
+        2,
+        "Rotation",
+        ControlType::Int32,
+        Direction::Out,
+        "libcamera",
+        None,
+        &[],
+    );
+    pub const MODEL: ControlId = ControlId::new(
+        3,
+        "Model",
+        ControlType::String,
+        Direction::Out,
+        "libcamera",
+        None,
+        &[],
+    );
+    pub const UNIT_CELL_SIZE: ControlId = ControlId::new(
+        4,
+        "UnitCellSize",
+        ControlType::Size,
+        Direction::Out,
+        "libcamera",
+        None,
+        &[],
+    );
+    pub const PIXEL_ARRAY_SIZE: ControlId = ControlId::new(
+        5,
+        "PixelArraySize",
+        ControlType::Size,
+        Direction::Out,
+        "libcamera",
+        None,
+        &[],
+    );
     pub const PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES: ControlId = ControlId::new(
         6,
         "PixelArrayOpticalBlackRectangles",
         ControlType::Rectangle,
         Direction::Out,
+        "libcamera",
+        Some(0),
+        &[],
     );
     pub const PIXEL_ARRAY_ACTIVE_AREAS: ControlId = ControlId::new(
         7,
         "PixelArrayActiveAreas",
         ControlType::Rectangle,
         Direction::Out,
+        "libcamera",
+        Some(0),
+        &[],
     );
     pub const SCALER_CROP_MAXIMUM: ControlId = ControlId::new(
         8,
         "ScalerCropMaximum",
         ControlType::Rectangle,
         Direction::Out,
+        "libcamera",
+        None,
+        &[],
     );
-    pub const SENSOR_SENSITIVITY: ControlId =
-        ControlId::new(9, "SensorSensitivity", ControlType::Float, Direction::Out);
-    pub const SYSTEM_DEVICES: ControlId =
-        ControlId::new(10, "SystemDevices", ControlType::Int64, Direction::Out);
+    pub const SENSOR_SENSITIVITY: ControlId = ControlId::new(
+        9,
+        "SensorSensitivity",
+        ControlType::Float,
+        Direction::Out,
+        "libcamera",
+        None,
+        &[],
+    );
+    pub const SYSTEM_DEVICES: ControlId = ControlId::new(
+        10,
+        "SystemDevices",
+        ControlType::Int64,
+        Direction::Out,
+        "libcamera",
+        Some(0),
+        &[],
+    );
 
     /// Location の列挙値
     pub mod location {
@@ -53,6 +112,16 @@ pub mod draft {
         "ColorFilterArrangement",
         ControlType::Int32,
         Direction::Out,
+        "draft",
+        None,
+        &[
+            (0, "RGGB"),
+            (1, "GRBG"),
+            (2, "GBRG"),
+            (3, "BGGR"),
+            (4, "RGB"),
+            (5, "MONO"),
+        ],
     );
 
     /// ColorFilterArrangement の列挙値
