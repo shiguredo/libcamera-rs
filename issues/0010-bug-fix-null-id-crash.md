@@ -1,7 +1,7 @@
 # lc_camera_manager_get_camera_by_id に nullptr を渡すとクラッシュする
 
 - Created: 2026-11-13
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-11-13
 - Branch: feature/fix-null-id-crash
 - Polished: 2026-11-13
 
@@ -132,3 +132,22 @@ Doxygen にも「Shared pointer to Camera object or nullptr if camera not found�
 - `CHANGES.md` の `develop` セクションに `[FIX]` として追記する。担当者行を含める
   - `[CHANGE]` ではなく `[FIX]` とする理由は、`id == nullptr` でクラッシュする挙動に依存していた呼び出し元は
     存在しえず、利用者がコードを修正する必要が無いためである
+
+## 解決方法 (実績)
+
+`c-api/camera_manager.cpp` の `lc_camera_manager_get_camera_by_id` の先頭に `id == nullptr` のガードを追加した。
+併せて、ガードが必要な理由 (`std::string_view` の `const char*` 構築が `char_traits::length` を呼び、
+`nullptr` では未定義動作になること) と、`nullptr` 以外の不正なポインタは守れないことをコメントとして残した。
+`c-api/camera_manager.h` の宣言とシグネチャ、Rust 側の `CameraManager::get_camera_by_id` は変更していない。
+
+`CHANGES.md` の `develop` セクションに `[FIX]` を担当者行付きで追記した。
+
+### 検証結果
+
+同じガードのロジックを `std::string_view` に対して単体で確かめた。
+
+- ガードありで `nullptr` を渡すと `nullptr` を返し、終了コード 0 で終わる
+- ガード無しで `nullptr` から `std::string_view` を構築すると SIGSEGV (終了コード 139) で落ちる
+
+`clang-format` と `prek` の変更ファイルに対する全フックは通過した。
+実際に `c-api/` をリンクしての確認は、この環境に libcamera と aarch64 向けの sysroot が無いため行っていない。
