@@ -13,6 +13,10 @@
 
 - [CHANGE] ControlId に vendor / array_length / enumerators を追加する
   - @Hexa
+- [CHANGE] rpi の CNN_OUTPUT_TENSOR 以降 6 件の ID を libcamera の採番に合わせる
+  - @Hexa
+- [ADD] core::HUE と rpi::CONTROL_LIST_SEQUENCE を追加する
+  - @Hexa
 - [FIX] lc_camera_manager_get_camera_by_id に NULL を渡すとクラッシュする問題を修正する
   - @Hexa
 
