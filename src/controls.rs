@@ -35,6 +35,16 @@ pub struct ControlId {
     name: &'static str,
     control_type: ControlType,
     direction: Direction,
+    /// このコントロールの提供元 ("libcamera" / "draft" / "rpi")
+    vendor: &'static str,
+    /// 配列の要素数
+    ///
+    /// None はスカラー、Some(n) は要素数 n の固定長配列、Some(0) は可変長配列を表す。
+    array_length: Option<usize>,
+    /// 列挙子の値と名前の対応
+    ///
+    /// 列挙子を持たないコントロールでは空になる。
+    enumerators: &'static [(i32, &'static str)],
 }
 
 impl ControlId {
@@ -44,12 +54,18 @@ impl ControlId {
         name: &'static str,
         control_type: ControlType,
         direction: Direction,
+        vendor: &'static str,
+        array_length: Option<usize>,
+        enumerators: &'static [(i32, &'static str)],
     ) -> Self {
         Self {
             id,
             name,
             control_type,
             direction,
+            vendor,
+            array_length,
+            enumerators,
         }
     }
 
@@ -71,6 +87,29 @@ impl ControlId {
     /// コントロールの方向を返す
     pub fn direction(&self) -> Direction {
         self.direction
+    }
+
+    /// このコントロールの提供元を返す
+    ///
+    /// "libcamera" (libcamera 標準)、"draft" (draft 指定)、"rpi" (Raspberry Pi 固有) のいずれかになる。
+    pub fn vendor(&self) -> &'static str {
+        self.vendor
+    }
+
+    /// 配列の要素数を返す
+    ///
+    /// None はスカラー、Some(n) は要素数 n の固定長配列、Some(0) は可変長配列を表す。
+    /// libcamera の isArray() は 0 より大きい場合のみ真となり可変長配列を配列と判定しないため、
+    /// その意味をそのまま写さず、可変長配列を Some(0) で明示的に表す。
+    pub fn array_length(&self) -> Option<usize> {
+        self.array_length
+    }
+
+    /// 列挙子の値と名前の対応を返す
+    ///
+    /// 列挙子を持たないコントロールでは空のスライスになる。
+    pub fn enumerators(&self) -> &'static [(i32, &'static str)] {
+        self.enumerators
     }
 }
 

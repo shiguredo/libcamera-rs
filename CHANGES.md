@@ -11,6 +11,8 @@
 
 ## develop
 
+- [CHANGE] ControlId に vendor / array_length / enumerators を追加する
+  - @Hexa
 - [FIX] lc_camera_manager_get_camera_by_id に NULL を渡すとクラッシュする問題を修正する
   - @Hexa
 
