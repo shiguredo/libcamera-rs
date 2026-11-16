@@ -1,7 +1,7 @@
 # v0.7.2 追従時に取りこぼしたコントロールを追加し rpi の ID を是正する
 
 - Created: 2026-11-13
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-11-16
 - Branch: feature/add-new-controls-0_8_0
 - Polished: 2026-11-13
 
@@ -121,3 +121,30 @@ libcamera が 0、draft が 10000、rpi が 20000 である。
   `CNN_OUTPUT_TENSOR` 以降の 6 件の ID を 1 つずつ増やす
 - 追加する 2 件の型と方向は v0.8.0 の YAML の `type` と `direction` をそのまま移す
 - `CHANGES.md` の `develop` セクションに `[ADD]` と `[CHANGE]` を追加する
+
+## 解決方法 (実績)
+
+`src/control_ids.rs` の `core` モジュールに `HUE` を ID 53 で追加し、
+`rpi` モジュールの `SYNC_FRAMES` の直後に `CONTROL_LIST_SEQUENCE` を ID 20009 で追加した。
+`rpi` の `CNN_OUTPUT_TENSOR` から `CNN_KPI_INFO` までの 6 件の ID を 20010 から 20015 に変更した。
+
+`CHANGES.md` の `develop` セクションに `[ADD]` と `[CHANGE]` を担当者行付きで追記した。
+`c-api/` と `src/controls.rs` と `examples/` は変更していない。
+
+### 同時に修正した既存の誤り
+
+`rpi::CNN_INPUT_TENSOR` の `array_length` が `None` になっていた。
+libcamera の `control_ids_rpi.yaml` では `size: [n]` の可変長配列であるため、`Some(0)` に修正した。
+この誤りは、コントロール ID に vendor / 配列長 / 列挙子を追加した際に、YAML の該当エントリだけ
+キーのインデントが他のエントリより 1 文字深く、パーサが想定した位置に一致しなかったため読み落としたことによる。
+本 issue は同じ定数の ID を変更するため、併せて修正した。
+
+### 検証結果
+
+- 定義数が core 53 / draft 14 / rpi 15 の合計 82 件になった
+- 82 件すべてについて、ID・名前・型・方向・配列長・vendor が v0.8.0 の YAML と一致することを機械的に確認した
+- 既存の定数のうち変化したのは `rpi` の CNN 系 6 件の ID だけで、追加されたのは `core::HUE` と `rpi::CONTROL_LIST_SEQUENCE` の 2 件だけである
+- 既存の列挙値モジュール 27 件の定数名と値は変化していない
+- `cargo fmt --all -- --check` が通る
+
+`cargo clippy` と実際のビルドは、この環境に libcamera と aarch64 向けの sysroot が無いため実行していない。

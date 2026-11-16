@@ -503,6 +503,15 @@ pub mod core {
         None,
         &[],
     );
+    pub const HUE: ControlId = ControlId::new(
+        53,
+        "Hue",
+        ControlType::Float,
+        Direction::InOut,
+        "libcamera",
+        None,
+        &[],
+    );
 
     /// AeState の列挙値
     pub mod ae_state {
@@ -927,8 +936,17 @@ pub mod rpi {
         None,
         &[],
     );
-    pub const CNN_OUTPUT_TENSOR: ControlId = ControlId::new(
+    pub const CONTROL_LIST_SEQUENCE: ControlId = ControlId::new(
         20009,
+        "ControlListSequence",
+        ControlType::Int64,
+        Direction::Out,
+        "rpi",
+        None,
+        &[],
+    );
+    pub const CNN_OUTPUT_TENSOR: ControlId = ControlId::new(
+        20010,
         "CnnOutputTensor",
         ControlType::Float,
         Direction::Out,
@@ -937,7 +955,7 @@ pub mod rpi {
         &[],
     );
     pub const CNN_OUTPUT_TENSOR_INFO: ControlId = ControlId::new(
-        20010,
+        20011,
         "CnnOutputTensorInfo",
         ControlType::Byte,
         Direction::Out,
@@ -946,7 +964,7 @@ pub mod rpi {
         &[],
     );
     pub const CNN_ENABLE_INPUT_TENSOR: ControlId = ControlId::new(
-        20011,
+        20012,
         "CnnEnableInputTensor",
         ControlType::Bool,
         Direction::In,
@@ -955,16 +973,16 @@ pub mod rpi {
         &[],
     );
     pub const CNN_INPUT_TENSOR: ControlId = ControlId::new(
-        20012,
+        20013,
         "CnnInputTensor",
         ControlType::Byte,
         Direction::Out,
         "rpi",
-        None,
+        Some(0),
         &[],
     );
     pub const CNN_INPUT_TENSOR_INFO: ControlId = ControlId::new(
-        20013,
+        20014,
         "CnnInputTensorInfo",
         ControlType::Byte,
         Direction::Out,
@@ -973,7 +991,7 @@ pub mod rpi {
         &[],
     );
     pub const CNN_KPI_INFO: ControlId = ControlId::new(
-        20014,
+        20015,
         "CnnKpiInfo",
         ControlType::Int32,
         Direction::Out,
