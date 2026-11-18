@@ -1,7 +1,7 @@
 # README とコントロール一覧とスキルを libcamera v0.8.0 に更新する
 
 - Created: 2026-11-13
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-11-18
 - Branch: feature/update-docs-0_8_0
 - Polished: 2026-11-18
 
@@ -176,3 +176,38 @@ v0.8.0 追従の影響を受けるドキュメントと、現在の記述は次�
 - `skills/shiguredo-libcamera/SKILL.md` の「設計方針」に挙げた各節を更新する
 - `CHANGES.md` の `develop` セクションに `[UPDATE]` を 1 件追記する
 - 全角と半角の間に半角スペースを入れる規約に従う
+
+## 解決方法 (実績)
+
+`README.md` の対応 libcamera バージョンを v0.8.0+rpt20261104 に更新した。
+
+`docs/CONTROLS.md` は、冒頭を「全コントロール (82 件)」と「カメラのプロパティ (12 件)」に分けて書き換え、
+`Hue` (core、ID 53) と `ControlListSequence` (rpi、ID 20009) を追加し、rpi の CNN 系 6 件の ID を
+20010 から 20015 に是正し、末尾にプロパティの章を新設した。
+
+`skills/shiguredo-libcamera/SKILL.md` は、バージョン情報、動作環境、既知の制限事項、`ControlId`、
+コントロール定数、プロパティ定数、コード例の各節を更新した。
+
+`CHANGES.md` の `develop` セクションに、`[ADD]` の後かつ `[FIX]` の前に `[UPDATE]` を追記した。
+
+コードは変更していない。
+
+### 説明文の出所
+
+`docs/CONTROLS.md` に新規記載した項目の説明文は、libcamera v0.8.0+rpt20261104 の
+`control_ids_core.yaml`、`control_ids_rpi.yaml`、`property_ids_core.yaml`、`property_ids_draft.yaml`
+の `description` を日本語にしたものである。
+
+列挙子を持つ項目は、各列挙子の `description` も反映した。
+`ColorFilterArrangement` は値 4 と 5 が Bayer 配列ではなく、値 4 は 1 画素あたり 3 つの 16 ビット値を出力することを明記した。
+`Rotation` は、センサーの読み出し座標系とレンズ投影後のシーン座標系の反時計回りの角度差であり、
+範囲が 0 度以上 360 度未満であることを明記した。
+
+### 検証結果
+
+- `docs/CONTROLS.md` の各章の項目数が、`src/control_ids.rs` と `src/property_ids.rs` の定数数と一致することを機械的に確認した
+  (Core 53 / Draft 14 / Raspberry Pi 15 / プロパティ Core 11 / プロパティ Draft 1)
+- `docs/CONTROLS.md` に記載した定数名 94 件が、すべて `src/` の定数として存在することを確認した
+- `skills/shiguredo-libcamera/SKILL.md` から、`2026.1.0`、`v0.7.0+rpt20260205`、`PIXEL_ARRAY_SIZE`、
+  `ID 1..52`、`Dev Container セットアップガイド` がなくなったことを確認した
+- `prek run trailing-whitespace end-of-file-fixer mixed-line-ending --all-files` が通ることを確認した
