@@ -119,7 +119,8 @@ ID 6 は `PixelArrayReadableArea` (Rectangle、スカラー) である。どち�
 本 issue はその拡張後のシグネチャに従う。
 拡張が未適用の状態で実装する場合は現行の 4 引数で定義し、拡張の適用時にこの 3 件も新しいシグネチャへ追随させる。
 
-追加する 3 件の vendor は `"libcamera"`、列挙子は空、配列長は `PixelArrayActiveAreas` と同様にすべてスカラーである。
+追加する 3 件の vendor は `"libcamera"`、列挙子は空、配列長は 3 件ともスカラーなので `None` である。
+`PixelArrayActiveAreas` は `size: [n]` の可変長配列であり `Some(0)` だが、追加する 3 件はいずれも `size` を持たない。
 
 ### 変更履歴
 
