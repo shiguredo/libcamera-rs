@@ -26,6 +26,8 @@
   - @Hexa
 - [ADD] core::HUE と rpi::CONTROL_LIST_SEQUENCE を追加する
   - @Hexa
+- [UPDATE] 対応 libcamera を v0.8.0+rpt20261104 に更新する
+  - @Hexa
 - [FIX] lc_camera_manager_get_camera_by_id に NULL を渡すとクラッシュする問題を修正する
   - @Hexa
 

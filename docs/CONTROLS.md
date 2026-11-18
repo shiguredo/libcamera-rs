@@ -1,8 +1,9 @@
 # 対応コントロール一覧
 
-libcamera v0.7.2+rpt20261009 の全コントロール (80 件) に対応しています。
+libcamera v0.8.0+rpt20261104 の全コントロール (82 件) に対応しています。
+カメラのプロパティ (12 件) にも対応しています。
 
-## Core (52 件)
+## Core (53 件)
 
 ### AeEnable (ID: 1)
 
@@ -543,6 +544,16 @@ WDR アルゴリズムの強度を指定する。0 はトーンマッピング�
 
 レンズシェーディング補正の有効/無効を制御する。
 
+### Hue (ID: 53)
+
+- 定数名: `core::HUE`
+- 型: Float
+- 方向: InOut
+
+HSL/HSV 色空間の定義に従い、画像の色相 (色回転) を度単位で調整する。
+値は HSL/HSV 空間の色相環における回転を表し、正の値は時計回り (たとえば +60 度で赤が黄に)、負の値は反時計回り (たとえば -60 度で赤がマゼンタに) に回転する。
+公称範囲は -180 から 180 で、0 度は色相を変えず、範囲は連続的に循環する (180 度と -180 度は同じ)。
+
 ## Draft (14 件)
 
 ### AePrecaptureTrigger (ID: 10001)
@@ -704,7 +715,7 @@ AWB アルゴリズムの現在の状態を報告する。
 
 検出された各顔に割り当てられた一意の ID。顔が視野から出て再び現れた場合、新しい ID が割り当てられる場合がある。メタデータでのみ返される。
 
-## Raspberry Pi (14 件)
+## Raspberry Pi (15 件)
 
 ### StatsOutputEnable (ID: 20001)
 
@@ -776,7 +787,15 @@ PiSP Frontend ISP が生成した現在のフレームの統計情報。StatsOut
 
 サーバーが SyncModeServer を有効にしてから SyncReady でフレーム使用を通知するまでの待機フレーム数。サーバー側のデバイスにのみ設定する。
 
-### CnnOutputTensor (ID: 20009)
+### ControlListSequence (ID: 20009)
+
+- 定数名: `rpi::CONTROL_LIST_SEQUENCE`
+- 型: Int64
+- 方向: Out
+
+コントロールリストが適用された直後のリクエストのシーケンス番号。コントロールは通常数フレーム遅れて適用されるため、この値は数フレーム前に投入されたリクエストを指す。
+
+### CnnOutputTensor (ID: 20010)
 
 - 定数名: `rpi::CNN_OUTPUT_TENSOR`
 - 型: Float (配列)
@@ -784,7 +803,7 @@ PiSP Frontend ISP が生成した現在のフレームの統計情報。StatsOut
 
 CNN (畳み込みニューラルネットワーク) の出力テンソル。サイズとフォーマットは使用するニューラルネットワークに依存する。構造は CnnOutputTensorInfo で記述される。
 
-### CnnOutputTensorInfo (ID: 20010)
+### CnnOutputTensorInfo (ID: 20011)
 
 - 定数名: `rpi::CNN_OUTPUT_TENSOR_INFO`
 - 型: Byte (配列)
@@ -792,7 +811,7 @@ CNN (畳み込みニューラルネットワーク) の出力テンソル。サ�
 
 CnnOutputTensor の構造情報。ネットワーク名、テンソル数、各テンソルの要素数・次元数・サイズを含む。
 
-### CnnEnableInputTensor (ID: 20011)
+### CnnEnableInputTensor (ID: 20012)
 
 - 定数名: `rpi::CNN_ENABLE_INPUT_TENSOR`
 - 型: Bool
@@ -800,7 +819,7 @@ CnnOutputTensor の構造情報。ネットワーク名、テンソル数、各�
 
 CNN 入力テンソルの出力を有効/無効にする。入力テンソルは比較的大きいため、デバッグ目的でない限り無効にすることが推奨される。
 
-### CnnInputTensor (ID: 20012)
+### CnnInputTensor (ID: 20013)
 
 - 定数名: `rpi::CNN_INPUT_TENSOR`
 - 型: Byte (配列)
@@ -808,7 +827,7 @@ CNN 入力テンソルの出力を有効/無効にする。入力テンソルは
 
 CNN の入力テンソルのピクセル値。CnnEnableInputTensor が true の場合に出力される。構造は CnnInputTensorInfo で記述される。
 
-### CnnInputTensorInfo (ID: 20013)
+### CnnInputTensorInfo (ID: 20014)
 
 - 定数名: `rpi::CNN_INPUT_TENSOR_INFO`
 - 型: Byte (配列)
@@ -816,10 +835,135 @@ CNN の入力テンソルのピクセル値。CnnEnableInputTensor が true の�
 
 CnnInputTensor の構造情報。ネットワーク名、幅、高さ、チャンネル数を含む。
 
-### CnnKpiInfo (ID: 20014)
+### CnnKpiInfo (ID: 20015)
 
 - 定数名: `rpi::CNN_KPI_INFO`
 - 型: Int32 (配列, サイズ 2)
 - 方向: Out
 
 CNN 処理ステージのパフォーマンス指標。CNN/DNN ステージと DSP ステージのランタイムをミリ秒単位で報告する。
+
+## プロパティ Core (11 件)
+
+### Location (ID: 1)
+
+- 定数名: `properties::core::LOCATION`
+- 型: Int32
+- 方向: Out
+
+カメラの取り付け位置。デバイスの正面 (ユーザー側) に取り付けられているか、背面か、外部接続かを表す。
+
+| 値 | 定数 | 説明 |
+|----|------|------|
+| 0 | `location::FRONT` | デバイスの前面に取り付けられており、ユーザーの方を向いている |
+| 1 | `location::BACK` | デバイスの背面に取り付けられており、ユーザーの反対を向いている |
+| 2 | `location::EXTERNAL` | 自由に動かせる形でデバイスに取り付けられている |
+
+### Rotation (ID: 2)
+
+- 定数名: `properties::core::ROTATION`
+- 型: Int32
+- 方向: Out
+
+カメラの物理的な取り付け角度。カメラの座標系 `Rc` と、投影後のシーンの座標系 `Rp` の間の反時計回りの角度差を度単位で表し、範囲は 0 度以上 360 度未満である。
+
+- `Rc` はセンサーの画素配列の読み出し順で定まる座標系で、原点は最初に読み出される画素、X 軸は列の読み出し方向、Y 軸は行の読み出し方向である
+- `Rp` は、カメラモジュールの焦点面にある外部世界のシーンの座標系 `Rs` を、レンズの光学的な反転を経てセンサーの画素配列に投影したものである。レンズの反転により、投影された像は上下左右が反転する
+
+したがってこの値は、レンズ投影後の像とセンサーの読み出し座標系の関係を表す。投影前の外部世界とカメラの角度差として読むと、補正の向きが逆になる。
+
+たとえば値が 90 度の場合、像を正しい向きで表示するには反時計回りに 90 度回転させる補正を適用する。
+
+### Model (ID: 3)
+
+- 定数名: `properties::core::MODEL`
+- 型: String
+- 方向: Out
+
+センサーのモデル名。可能な限りセンサーを特定できる名前を返す。ほとんどのデバイスではセンサーの型番になる。センサーやカメラ全体がより大きなユニットの一部であり、システムからブラックボックスとして扱われる場合は型番を取得できないため、その場合はセンサーを含む最小のデバイスのモデル名を返す。
+
+### UnitCellSize (ID: 4)
+
+- 定数名: `properties::core::UNIT_CELL_SIZE`
+- 型: Size
+- 方向: Out
+
+画素の単位セルの物理サイズ (ナノメートル単位)。有効な部分と有効でない部分を含めた 1 画素分の水平方向と垂直方向のサイズを表す。つまり隣接する画素の左上の角どうしの距離になる。
+
+### PixelArrayArea (ID: 5)
+
+- 定数名: `properties::core::PIXEL_ARRAY_AREA`
+- 型: Rectangle
+- 方向: Out
+
+カメラセンサーの画素配列全体の領域 (画素単位)。読み出し可能な画素と読み出し不可能な画素の両方を含む画素行列の全体を表す。この矩形の左上の角は常に (0, 0) である。読み出し可能な最大の領域は PixelArrayReadableArea を参照する。
+
+### PixelArrayReadableArea (ID: 6)
+
+- 定数名: `properties::core::PIXEL_ARRAY_READABLE_AREA`
+- 型: Rectangle
+- 方向: Out
+
+カメラセンサーの読み出し可能領域 (画素単位)。画素配列全体のうち、実際に読み出せる部分を表す。較正用の光学ブラック画素を含むが、有効な画像データを持つのはアクティブ画素のみである。位置は PixelArrayArea を基準とする。この値はカメラが出力できる raw データの最大サイズを表す。
+
+### PixelArrayActiveAreas (ID: 7)
+
+- 定数名: `properties::core::PIXEL_ARRAY_ACTIVE_AREAS`
+- 型: Rectangle (配列)
+- 方向: Out
+
+カメラセンサーの読み出し可能な画素行列のうち、画像取得に有効と見なされる領域。複数の領域が重なり合う場合もある。各矩形は特定のアスペクト比に対してカメラセンサーが出力できる最大の画像サイズを表し、位置は PixelArrayArea を基準とする。複数の矩形が返る場合は、高さの高い順に並ぶ。
+
+### ScalerCropMaximum (ID: 8)
+
+- 定数名: `properties::core::SCALER_CROP_MAXIMUM`
+- 型: Rectangle
+- 方向: Out
+
+`core::SCALER_CROP` コントロールに指定できる最大の矩形。カメラセンサーとパイプラインの残りの部分で必須となる最小のクロップを反映する。`core::SCALER_CROP` と同じく、センサーのアクティブ画素配列から取得する矩形を表す。この値はカメラが正常に設定された後にのみ有効になる。
+
+### SensorSensitivity (ID: 9)
+
+- 定数名: `properties::core::SENSOR_SENSITIVITY`
+- 型: Float
+- 方向: Out
+
+選択されているセンサーモードの相対感度。センサーによっては読み出しモードごとに感度が異なる。たとえばビニング読み出しのモードでは、同じ露出とゲインでも全画素読み出しの 2 倍の信号レベルが得られることがあり、その場合はビニングモードが全画素読み出しモードの 2 倍の値を示す。この値は `configure()` が成功した後に有効になる。
+
+### SystemDevices (ID: 10)
+
+- 定数名: `properties::core::SYSTEM_DEVICES`
+- 型: Int64 (配列)
+- 方向: Out
+
+このカメラの動作に使われている基盤デバイスの major 番号と minor 番号の組 (dev_t 型の整数値) の一覧。別のカメラが同じデバイスを報告する場合もある。
+
+### PipelineHandler (ID: 11)
+
+- 定数名: `properties::core::PIPELINE_HANDLER`
+- 型: String
+- 方向: Out
+
+このカメラデバイスを管理するパイプラインハンドラの名前。開発やデバッグ、サポートを目的とした情報である。パイプラインハンドラの名前は libcamera のリリース間で変わることがあり、安定しているとは限らない。
+
+## プロパティ Draft (1 件)
+
+### ColorFilterArrangement (ID: 10001)
+
+- 定数名: `properties::draft::COLOR_FILTER_ARRANGEMENT`
+- 型: Int32
+- 方向: Out
+
+センサー上のカラーフィルタの配列。センサーの左上 2x2 区画の色を読み出し順に表す。
+
+値 0 から 3 は Bayer 配列であり、1 画素あたり 1 つの 16 ビット値が出力される。
+値 4 と 5 は Bayer 配列ではなく、上記の 2x2 区画の読み方も当てはまらない。
+
+| 値 | 定数 | 説明 |
+|----|------|------|
+| 0 | `color_filter_arrangement::RGGB` | RGGB の Bayer 配列 |
+| 1 | `color_filter_arrangement::GRBG` | GRBG の Bayer 配列 |
+| 2 | `color_filter_arrangement::GBRG` | GBRG の Bayer 配列 |
+| 3 | `color_filter_arrangement::BGGR` | BGGR の Bayer 配列 |
+| 4 | `color_filter_arrangement::RGB` | Bayer 配列ではない。1 画素あたり 1 つの 16 ビット値ではなく、3 つの 16 ビット値が出力される |
+| 5 | `color_filter_arrangement::MONO` | Bayer 配列ではない。単一の色チャンネルのみが出力される |
