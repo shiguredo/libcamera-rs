@@ -40,22 +40,22 @@ pub mod core {
         None,
         &[],
     );
-    pub const PIXEL_ARRAY_SIZE: ControlId = ControlId::new(
+    pub const PIXEL_ARRAY_AREA: ControlId = ControlId::new(
         5,
-        "PixelArraySize",
-        ControlType::Size,
+        "PixelArrayArea",
+        ControlType::Rectangle,
         Direction::Out,
         "libcamera",
         None,
         &[],
     );
-    pub const PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES: ControlId = ControlId::new(
+    pub const PIXEL_ARRAY_READABLE_AREA: ControlId = ControlId::new(
         6,
-        "PixelArrayOpticalBlackRectangles",
+        "PixelArrayReadableArea",
         ControlType::Rectangle,
         Direction::Out,
         "libcamera",
-        Some(0),
+        None,
         &[],
     );
     pub const PIXEL_ARRAY_ACTIVE_AREAS: ControlId = ControlId::new(
@@ -92,6 +92,15 @@ pub mod core {
         Direction::Out,
         "libcamera",
         Some(0),
+        &[],
+    );
+    pub const PIPELINE_HANDLER: ControlId = ControlId::new(
+        11,
+        "PipelineHandler",
+        ControlType::String,
+        Direction::Out,
+        "libcamera",
+        None,
         &[],
     );
 

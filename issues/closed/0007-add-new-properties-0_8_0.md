@@ -1,7 +1,7 @@
 # v0.7.2 追従時に取りこぼしたプロパティを追加し不要になった定数を削除する
 
 - Created: 2026-11-13
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-11-18
 - Branch: feature/add-new-properties-0_8_0
 - Polished: 2026-11-13
 
@@ -77,13 +77,19 @@ v0.7.2 以降の libcamera に同等の情報を返すプロパティは用意�
 ### 現行定数を使った場合の挙動
 
 `c-api/controls.cpp` の `lc_control_list_get_*` は、ID がリストに存在しないか型が一致しない場合に `false` を返す。
+配列用の getter は、さらに `isArray()` が真であることも要求する。
 `src/controls.rs` の `ControlList::get_*` はその場合に `Err(Error::ControlGetFailed)` を返す。
 
-v0.7.2 以降の libcamera では ID 5 は `PixelArrayArea` (Rectangle) であり、ID 6 は `PixelArrayReadableArea` (Rectangle) である。
+v0.7.2 以降の libcamera では ID 5 は `PixelArrayArea` (Rectangle、スカラー) であり、
+ID 6 は `PixelArrayReadableArea` (Rectangle、スカラー) である。どちらも配列ではない。
 
 - `PIXEL_ARRAY_SIZE` (ID 5) を `get_size` に渡すと、型が一致しないため `Err(Error::ControlGetFailed)` になる
-- `PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES` (ID 6) を `get_rectangle_array` に渡すと、型が一致するため
-  `PixelArrayReadableArea` の値を受け取る。エラーにならず、別の意味の値を返す
+- `PIXEL_ARRAY_SIZE` (ID 5) を `get_rectangle` に渡すと、型が一致するため `PixelArrayArea` の値を受け取る。
+  エラーにならず、画素配列全体の領域を読み出し領域として受け取ってしまう
+- `PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES` (ID 6) を `get_rectangle` に渡すと、型が一致するため
+  `PixelArrayReadableArea` の値を受け取る。エラーにならず、光学ブラック画素の位置ではなく読み出し領域を受け取ってしまう
+- `PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES` (ID 6) を `get_rectangle_array` に渡すと、
+  配列でないため `isArray()` が偽になり `Err(Error::ControlGetFailed)` になる
 
 ## 設計方針
 
@@ -101,7 +107,8 @@ v0.7.2 以降の libcamera では ID 5 は `PixelArrayArea` (Rectangle) であ�
   - 後継があるのは `PIXEL_ARRAY_READABLE_AREA` だけであり、型が `Size` から `Rectangle` に変わるため、
     `#[deprecated]` の note で単純に誘導できない
   - `PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES` には後継が無く、`#[deprecated]` の note に書く代替を示せない
-  - どちらも残すと、ID が別のプロパティに再利用されているため、エラーにならず誤った値を受け取る経路が残る
+  - どちらも残すと、ID が別のプロパティに再利用されているため、`get_rectangle` でエラーにならず
+    別の意味の矩形を受け取る経路が残る
 - `draft` の `ColorFilterArrangement` と `color_filter_arrangement` モジュールは両バージョンに存在するため変更しない
 - `core::location` の列挙値定数 (`FRONT` / `BACK` / `EXTERNAL`) は v0.7.2 以降の列挙子名と値が一致しているため変更しない
 - 既存の定数のうち、削除する 2 件以外の ID・名前・型は変更しない
@@ -112,7 +119,8 @@ v0.7.2 以降の libcamera では ID 5 は `PixelArrayArea` (Rectangle) であ�
 本 issue はその拡張後のシグネチャに従う。
 拡張が未適用の状態で実装する場合は現行の 4 引数で定義し、拡張の適用時にこの 3 件も新しいシグネチャへ追随させる。
 
-追加する 3 件の vendor は `"libcamera"`、列挙子は空、配列長は `PixelArrayActiveAreas` と同様にすべてスカラーである。
+追加する 3 件の vendor は `"libcamera"`、列挙子は空、配列長は 3 件ともスカラーなので `None` である。
+`PixelArrayActiveAreas` は `size: [n]` の可変長配列であり `Some(0)` だが、追加する 3 件はいずれも `size` を持たない。
 
 ### 変更履歴
 
@@ -149,3 +157,27 @@ v0.8.0 追従全体の変更履歴をドキュメント更新の issue が一括
 - `skills/shiguredo-libcamera/SKILL.md` は `PIXEL_ARRAY_SIZE` と `get_size(&props::PIXEL_ARRAY_SIZE)` を記載しており、
   本 issue でこの定数を削除すると記載が壊れる。この修正はドキュメント更新の issue が扱う
 - `CHANGES.md` の `develop` セクションに `[ADD]` と `[CHANGE]` を追加する
+
+## 解決方法 (実績)
+
+`src/property_ids.rs` の `core` モジュールから `PIXEL_ARRAY_SIZE` と `PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES` を削除し、
+同じ位置に `PIXEL_ARRAY_AREA` (ID 5) と `PIXEL_ARRAY_READABLE_AREA` (ID 6) を追加した。
+`SYSTEM_DEVICES` の後に `PIPELINE_HANDLER` (ID 11) を追加した。
+
+追加した 3 件は、いずれも型が `ControlType::Rectangle` または `ControlType::String`、方向が `Direction::Out`、
+vendor が `"libcamera"`、配列長が `None`、列挙子が空である。
+方向が `Out` である根拠は、libcamera の `utils/codegen/controls.py` がプロパティの方向を常に `out` としていることによる。
+
+`CHANGES.md` の `develop` セクションに `[CHANGE]` (2 件の削除) と `[ADD]` (3 件の追加) を担当者行付きで追記した。
+`c-api/`、`src/controls.rs`、`examples/` は変更していない。
+
+### 検証結果
+
+- `core` のプロパティ定数が ID 1 から 11 まで欠番なく 11 件になった
+- 11 件すべてについて、ID・名前・型・配列長が v0.8.0 の `property_ids_core.yaml` と一致することを機械的に確認した
+- 方向がすべて `Direction::Out` であることを確認した
+- `draft::COLOR_FILTER_ARRANGEMENT` と `color_filter_arrangement` モジュール、`core::location` の列挙値定数は変化していない
+- 削除した 2 件の定数への参照が Rust コードに残っていないことを確認した
+- `cargo fmt --all -- --check` が通る
+
+`cargo clippy` と実際のビルドは、この環境に libcamera と aarch64 向けの sysroot が無いため実行していない。
