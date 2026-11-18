@@ -214,3 +214,25 @@ ControlValue *ControlList::find(unsigned int id)
   `set_*` 12 個を `Result<()>` に変更する。C ABI の戻り値が `false` の場合に `Err(Error::ControlSetFailed)` を返す
 - `src/error.rs` に `ControlSetFailed` と `impl fmt::Display` の対応するアームを追加する
 - `examples/controls.rs` と `README.md` の呼び出しを更新する
+
+## pending とする理由
+
+libcamera v0.8.0+rpt20261104 への追従を進めている現時点では、本 issue の対応を行わない。
+
+本 issue は libcamera v0.8.0 への追従を目的とするものではない。
+libcamera v0.7.2+rpt20261009 と v0.8.0+rpt20261104 の `src/libcamera/controls.cpp` は内容が完全に一致しており、
+`ControlList::set(unsigned int, const ControlValue&)` の実装も v0.6.0 から変化していない。
+現行の `c-api/controls.cpp` は v0.8.0 のヘッダーでそのままコンパイルできる。
+
+一方で本 issue は、`ControlList::set_*` の戻り値を `()` から `Result<()>` に変え、
+C ABI の setter も `void` から `bool` に変える後方互換のない変更である。
+追従作業とは独立した API 契約の変更を同じ時期に混ぜると、利用者への影響が追従によるものか
+本 issue によるものかを切り分けにくくなる。
+
+そのため、v0.8.0 追従の一連の作業が完了した後に、独立した API 改善として改めて着手する。
+
+実装は一度行ったが、上記の理由により取り下げた。着手時には次の点に注意する。
+
+- `c-api/request.cpp` の `lc_request_controls` は `writable = true` とする必要がある。
+  改名前の `owned` は 3 箇所すべてが `false` であり、そのまま流用すると `Request::controls()` が書き込み不可になる
+- `src/request.rs` の `Request::controls()` が `ControlList::from_raw` に渡す第 2 引数も `true` にする必要がある
