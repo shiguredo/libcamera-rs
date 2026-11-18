@@ -19,17 +19,17 @@ description: 時雨堂の libcamera Rust バインディング shiguredo_libcame
 ## バージョン情報
 
 - crate 名: `shiguredo_libcamera`
-- バージョン: 2026.1.0
+- バージョン: 2026.2.0
 - Rust Edition: 2024
 - 最小 Rust バージョン: 1.93
 - ライセンス: Apache-2.0
-- 対応 libcamera: **v0.7.0+rpt20260205** (動的リンク先のバージョンが互換でないと動作しない可能性あり)
+- 対応 libcamera: **v0.8.0+rpt20261104** (動的リンク先のバージョンが互換でないと動作しない可能性あり)
 
 ## 動作環境
 
 - Raspberry Pi OS など、libcamera が動作する環境
 - `libcamera-dev` パッケージが必要 (`sudo apt install libcamera-dev`)
-- macOS arm64 でも Dev Containers を使えばクロスコンパイル可能 (Dev Container セットアップガイドを参照)
+- macOS arm64 でも Dev Containers を使えばクロスコンパイル可能 (README の Dev Containers の節を参照)
 
 ## 設計概要
 
@@ -218,11 +218,14 @@ libcamera の `shared_ptr<Camera>` を保持する所有型。`Drop` で参照�
 
 | メソッド | 戻り値 | 説明 |
 |----------|--------|------|
-| `ControlId::new(id, name, control_type, direction)` | `Self` (const) | 新規定義 |
+| `ControlId::new(id, name, control_type, direction, vendor, array_length, enumerators)` | `Self` (const) | 新規定義 |
 | `id()` | `u32` | 数値 ID |
 | `name()` | `&'static str` | コントロール名 |
 | `control_type()` | `ControlType` | 値の型 |
 | `direction()` | `Direction` | 入出力方向 |
+| `vendor()` | `&'static str` | 提供元 (`"libcamera"` / `"draft"` / `"rpi"`) |
+| `array_length()` | `Option<usize>` | `None` はスカラー、`Some(n)` は要素数 n の固定長配列、`Some(0)` は可変長配列 |
+| `enumerators()` | `&'static [(i32, &'static str)]` | 列挙子の値と名前の対応 (無ければ空) |
 
 `ControlType` enum: `None`, `Bool`, `Byte`, `Unsigned16`, `Unsigned32`, `Int32`, `Int64`, `Float`, `String`, `Rectangle`, `Size`, `Point`。
 
@@ -234,9 +237,9 @@ libcamera の `shared_ptr<Camera>` を保持する所有型。`Drop` で参照�
 
 | モジュール | 名前空間 | 主要定数 |
 |-----------|---------|---------|
-| `core` | libcamera 標準 (base = 0, ID 1..52) | `AE_ENABLE`, `EXPOSURE_TIME`, `ANALOGUE_GAIN`, `BRIGHTNESS`, `CONTRAST`, `SATURATION`, `SHARPNESS`, `AWB_ENABLE`, `AWB_MODE`, `COLOUR_GAINS`, `COLOUR_TEMPERATURE`, `AF_MODE`, `AF_TRIGGER`, `LENS_POSITION`, `HDR_MODE`, `GAMMA`, `WDR_MODE`, `FRAME_DURATION_LIMITS`, `SENSOR_TIMESTAMP` 等 |
+| `core` | libcamera 標準 (base = 0, ID 1..53) | `AE_ENABLE`, `EXPOSURE_TIME`, `ANALOGUE_GAIN`, `BRIGHTNESS`, `CONTRAST`, `SATURATION`, `HUE`, `SHARPNESS`, `AWB_ENABLE`, `AWB_MODE`, `COLOUR_GAINS`, `COLOUR_TEMPERATURE`, `AF_MODE`, `AF_TRIGGER`, `LENS_POSITION`, `HDR_MODE`, `GAMMA`, `WDR_MODE`, `FRAME_DURATION_LIMITS`, `SENSOR_TIMESTAMP` 等 |
 | `draft` | ドラフト (base = 10000) | `AE_PRECAPTURE_TRIGGER`, `NOISE_REDUCTION_MODE`, `AWB_STATE`, `TEST_PATTERN_MODE`, `FACE_DETECT_MODE`, `FACE_DETECT_FACE_RECTANGLES` 等 |
-| `rpi` | Raspberry Pi 拡張 (base = 20000) | `STATS_OUTPUT_ENABLE`, `BCM2835_STATS_OUTPUT`, `SCALER_CROPS`, `SYNC_MODE`, `SYNC_READY`, `CNN_OUTPUT_TENSOR` 等 |
+| `rpi` | Raspberry Pi 拡張 (base = 20000) | `STATS_OUTPUT_ENABLE`, `BCM2835_STATS_OUTPUT`, `SCALER_CROPS`, `SYNC_MODE`, `SYNC_READY`, `CONTROL_LIST_SEQUENCE`, `CNN_OUTPUT_TENSOR` 等 |
 
 各モジュール配下には enum 値用のサブモジュールが定義されている。例: `core::ae_state::{IDLE, SEARCHING, CONVERGED}`, `core::awb_mode::{AUTO, INCANDESCENT, DAYLIGHT, ...}`, `core::af_mode::{MANUAL, AUTO, CONTINUOUS}`, `rpi::sync_mode::{OFF, SERVER, CLIENT}` 等。
 
@@ -246,7 +249,7 @@ libcamera の `shared_ptr<Camera>` を保持する所有型。`Drop` で参照�
 
 | モジュール | 主要定数 |
 |-----------|---------|
-| `properties::core` | `LOCATION`, `ROTATION`, `MODEL`, `UNIT_CELL_SIZE`, `PIXEL_ARRAY_SIZE`, `PIXEL_ARRAY_ACTIVE_AREAS`, `SCALER_CROP_MAXIMUM`, `SENSOR_SENSITIVITY`, `SYSTEM_DEVICES` |
+| `properties::core` | `LOCATION`, `ROTATION`, `MODEL`, `UNIT_CELL_SIZE`, `PIXEL_ARRAY_AREA`, `PIXEL_ARRAY_READABLE_AREA`, `PIXEL_ARRAY_ACTIVE_AREAS`, `SCALER_CROP_MAXIMUM`, `SENSOR_SENSITIVITY`, `SYSTEM_DEVICES`, `PIPELINE_HANDLER` |
 | `properties::draft` | `COLOR_FILTER_ARRANGEMENT` |
 
 enum 値: `properties::core::location::{FRONT, BACK, EXTERNAL}`, `properties::draft::color_filter_arrangement::{RGGB, GRBG, GBRG, BGGR, RGB, MONO}`。
@@ -416,7 +419,8 @@ use shiguredo_libcamera::properties::core as props;
 
 let props_list = camera.properties();
 let model = props_list.get_string(&props::MODEL).ok();
-let pixel_array = props_list.get_size(&props::PIXEL_ARRAY_SIZE).ok();
+let readable_area = props_list.get_rectangle(&props::PIXEL_ARRAY_READABLE_AREA).ok();
+let pipeline_handler = props_list.get_string(&props::PIPELINE_HANDLER).ok();
 ```
 
 ### DMA-BUF プレーンの参照
@@ -456,7 +460,7 @@ for request in &requests {
 
 ## 既知の制限事項・利用上の注意
 
-- **libcamera のバージョン整合**: 動的リンク先の `libcamera` がビルド時の C++ ABI/構造体レイアウトと一致していないと未定義動作になる。`v0.7.0+rpt20260205` 系を想定している。
+- **libcamera のバージョン整合**: 動的リンク先の `libcamera` がビルド時の C++ ABI/構造体レイアウトと一致していないと未定義動作になる。`v0.8.0+rpt20261104` 系を想定している。
 - **コールバックの登録順序**: `on_request_completed()` は `start()` より前に登録する必要がある。`start()` 後に登録すると初期フレームを取りこぼす可能性がある。
 - **コールバックは libcamera のスレッドから呼ばれる**: `Fn + Send + Sync + 'static` を要求する。共有状態は `Arc<Mutex<...>>` 等で同期する (サンプル参照)。
 - **`controls()` / `metadata()` / `properties()` の戻り値は非所有**: 元の `Request` / `Camera` が破棄されると参照は無効になる。コールバック外への持ち出しは行わない。
