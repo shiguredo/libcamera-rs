@@ -15,6 +15,11 @@
   - @Hexa
 - [CHANGE] rpi の CNN_OUTPUT_TENSOR 以降 6 件の ID を libcamera の採番に合わせる
   - @Hexa
+- [CHANGE] core::PIXEL_ARRAY_SIZE と core::PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES を削除する
+  - PIXEL_ARRAY_SIZE の後継は core::PIXEL_ARRAY_READABLE_AREA であり、get_size から get_rectangle に変える必要がある
+  - @Hexa
+- [ADD] core::PIXEL_ARRAY_AREA と core::PIXEL_ARRAY_READABLE_AREA と core::PIPELINE_HANDLER を追加する
+  - @Hexa
 - [ADD] core::HUE と rpi::CONTROL_LIST_SEQUENCE を追加する
   - @Hexa
 - [FIX] lc_camera_manager_get_camera_by_id に NULL を渡すとクラッシュする問題を修正する
