@@ -77,13 +77,19 @@ v0.7.2 以降の libcamera に同等の情報を返すプロパティは用意�
 ### 現行定数を使った場合の挙動
 
 `c-api/controls.cpp` の `lc_control_list_get_*` は、ID がリストに存在しないか型が一致しない場合に `false` を返す。
+配列用の getter は、さらに `isArray()` が真であることも要求する。
 `src/controls.rs` の `ControlList::get_*` はその場合に `Err(Error::ControlGetFailed)` を返す。
 
-v0.7.2 以降の libcamera では ID 5 は `PixelArrayArea` (Rectangle) であり、ID 6 は `PixelArrayReadableArea` (Rectangle) である。
+v0.7.2 以降の libcamera では ID 5 は `PixelArrayArea` (Rectangle、スカラー) であり、
+ID 6 は `PixelArrayReadableArea` (Rectangle、スカラー) である。どちらも配列ではない。
 
 - `PIXEL_ARRAY_SIZE` (ID 5) を `get_size` に渡すと、型が一致しないため `Err(Error::ControlGetFailed)` になる
-- `PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES` (ID 6) を `get_rectangle_array` に渡すと、型が一致するため
-  `PixelArrayReadableArea` の値を受け取る。エラーにならず、別の意味の値を返す
+- `PIXEL_ARRAY_SIZE` (ID 5) を `get_rectangle` に渡すと、型が一致するため `PixelArrayArea` の値を受け取る。
+  エラーにならず、画素配列全体の領域を読み出し領域として受け取ってしまう
+- `PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES` (ID 6) を `get_rectangle` に渡すと、型が一致するため
+  `PixelArrayReadableArea` の値を受け取る。エラーにならず、光学ブラック画素の位置ではなく読み出し領域を受け取ってしまう
+- `PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES` (ID 6) を `get_rectangle_array` に渡すと、
+  配列でないため `isArray()` が偽になり `Err(Error::ControlGetFailed)` になる
 
 ## 設計方針
 
@@ -101,7 +107,8 @@ v0.7.2 以降の libcamera では ID 5 は `PixelArrayArea` (Rectangle) であ�
   - 後継があるのは `PIXEL_ARRAY_READABLE_AREA` だけであり、型が `Size` から `Rectangle` に変わるため、
     `#[deprecated]` の note で単純に誘導できない
   - `PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES` には後継が無く、`#[deprecated]` の note に書く代替を示せない
-  - どちらも残すと、ID が別のプロパティに再利用されているため、エラーにならず誤った値を受け取る経路が残る
+  - どちらも残すと、ID が別のプロパティに再利用されているため、`get_rectangle` でエラーにならず
+    別の意味の矩形を受け取る経路が残る
 - `draft` の `ColorFilterArrangement` と `color_filter_arrangement` モジュールは両バージョンに存在するため変更しない
 - `core::location` の列挙値定数 (`FRONT` / `BACK` / `EXTERNAL`) は v0.7.2 以降の列挙子名と値が一致しているため変更しない
 - 既存の定数のうち、削除する 2 件以外の ID・名前・型は変更しない
