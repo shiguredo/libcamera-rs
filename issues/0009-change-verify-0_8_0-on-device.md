@@ -2,8 +2,8 @@
 
 - Created: 2026-11-13
 - Completed: {YYYY-MM-DD}
-- Branch: feature/change-verify-0_8_0-on-device
-- Polished: 2026-11-13
+- Branch: feature/update-verify-0_8_0-on-device
+- Polished: 2026-11-18
 
 ## 目的
 
@@ -13,11 +13,18 @@
 
 libcamera v0.8.0+rpt20261104 では SONAME が 0.7 から 0.8 に上がった
 (libcamera v0.8.0 のリリース告知に「the SONAME is increased to 0.8」とある)。
-さらに v0.8.0 の `libcamera.pc` は `Requires: libcamera-base` を持つため、`libcamera-base.so.0.8` はアプリケーションの必須の実行時依存である。
-SONAME が上がると、実機に旧バージョンの `libcamera-base` しか無い場合はライブラリ解決に失敗する。
+
+`libcamera.so` は `libcamera-base.so` に依存しており、`libcamera.pc` も `Requires: libcamera-base` を持つ。
+ただし `libcamera-base.so` は独立したパッケージではなく、`libcamera0.7` と `libcamera0.8` のそれぞれに同梱されている。
+v0.7.2+rpt20261009-1 の deb には `libcamera-base.so.0.7` と `libcamera-base.so.0.7.2` が、
+v0.8.0+rpt20261104-1 の deb には `libcamera-base.so.0.8` と `libcamera-base.so.0.8.0` が含まれる。
+つまり SONAME が変わると、`libcamera-base.so` の解決先もパッケージ単位で切り替わる。
+
+v0.8.0 のバイナリを 0.7 系の libcamera しか入っていない実機に持ち込むと、`libcamera-base.so.0.8` を解決できずに失敗する。
+既存の `list_cameras` と `controls` が通っていたことは、0.7 系の `libcamera-base.so.0.7` が解決できたことしか示していない。
 
 しかし CI は実機の libcamera バージョンを確認していないため、`sysroot` 側と実機側がずれていても成功しうる。
-追従作業の正しさを確認するには、実機のバージョンを検証する手順を常設化する必要がある。
+実機のバージョンと SONAME の解決を検証する手順を常設化する必要がある。
 
 ## 現状
 
@@ -41,13 +48,18 @@ SONAME が上がると、実機に旧バージョンの `libcamera-base` しか�
 `docs/CONTAINER.md` は「CI と同等の clippy 検証をローカルで実行する方法」を扱う文書であり、
 aarch64 向けのクロスビルドとテストまでの記載で、実機動作は対象外である。
 
+CI ワークフローの `on.push.paths` は `c-api/**`、`src/**`、`examples/**`、`sysroot/**`、`Cargo.toml`、
+`.github/workflows/ci.yml` に限られている。
+そのため `docs/` だけを変更した PR では CI は起動しない。
+本 issue は `.github/workflows/ci.yml` を変更するため、その PR では `build` と `verify` が実行される。
+
 ## 設計方針
 
 ### 変更対象
 
 変更対象は `.github/workflows/ci.yml` と `docs/CONTAINER.md` に限定する。
 `c-api/`、`src/`、`examples/` は変更しない。
-カメラの有無の判定は、サンプルの終了コードではなく `list_cameras` が出力する JSON の `camera_count` を使って行う。
+カメラの有無は、既存の `controls` の成否で判定する。新たに JSON を解析する処理は追加しない。
 
 ### バージョン検証
 
@@ -64,18 +76,41 @@ aarch64 向けのクロスビルドとテストまでの記載で、実機動作
   出力に `libcamera-base.so.0.8` が含まれない場合は失敗させる
 - 併せて `ldd` の出力に `not found` が含まれないことを確認する
 
-### カメラ未接続時の扱い
+### `capture` が終了しない場合の扱い
+
+`examples/capture.rs` の `main` は、取得したフレーム数が目標に達するまで待ち続ける。
+次のループには待機の期限も上限も無い。
+
+```rust
+loop {
+    std::thread::sleep(std::time::Duration::from_millis(100));
+    let Ok(guard) = frames.lock() else { ... };
+    if guard.len() >= target_frame_count {
+        break;
+    }
+}
+```
+
+目標のフレーム数は `CAPTURE_FRAME_COUNT (5)` と確保したバッファ数の小さい方である。
+フレームが目標に達しなかった場合、`capture` は永久に待ち続ける。
+`verify` ジョブの `timeout-minutes: 10` に達するとジョブは失敗するが、
+その時点ではフレーム未到達なのか別の要因なのかを判別できない。
+
+そのため、`capture` の実行はジョブのタイムアウトに任せず、ステップ側で打ち切る。
+
+- `timeout` コマンドで上限を設けて実行し、打ち切られた場合はステップを失敗させる
+- `timeout` は打ち切り時に終了コード 124 を返すため、`|| true` のような形で握りつぶさない
+- 上限は `verify` ジョブの `timeout-minutes: 10` より十分短くし、打ち切りと他の要因を区別できるようにする
+- `capture` の合格条件は、終了コード 0 で終わることとする
+
+### カメラ 0 台の扱い
 
 `verify` ジョブは既に `list_cameras` と `controls` を実行しており、`controls` はカメラ 0 台で終了コード 1 になる。
-つまり「実機にカメラが接続されていること」は現行 CI の暗黙の前提である。
-この前提を変えず、**カメラ 0 台は失敗とする**方針に揃える。
+GitHub Actions は先行するステップが失敗すると後続を実行しないため、カメラ 0 台の場合は `capture` のステップに到達しない。
+つまり「実機にカメラが接続されていること」は現行 CI の暗黙の前提であり、本 issue でもこの前提を変えない。
 
-- カメラの有無は `list_cameras` の JSON の `camera_count` で判定する
-- カメラ 0 台の場合は、以降の `capture` 実行ステップを実行せずに明示的に失敗させる
-- カメラが 1 台以上の場合は `capture` を実行し、その終了コードをそのまま CI の成否にする
-
-`list_cameras` の JSON は `camera_count` のほかに `camera_id` などのキーを含むため、`python3` の `json` モジュールで
-`camera_count` だけを取り出す。`python3` が無い環境では代替の判定方法を使う必要があるため、実装時にランナーで確認する。
+`capture` のステップに `list_cameras` の判定を置く必要は無い。
+カメラの有無は `controls` の成否で既に判定されている。
 
 ### `verify` ジョブの追加ステップ
 
@@ -86,17 +121,17 @@ aarch64 向けのクロスビルドとテストまでの記載で、実機動作
 - 新たに action を追加しない (`actions/*` 以外の action を使う必要が生じた場合は、実装前にユーザーへ確認する)
 
 なお `.github/workflows/ci.yml` と `.github/workflows/release.yml` の `slack_notify` は
-`shiguredo/github-actions/.github/actions/slack-notify@main` とブランチを参照しており、commit hash 固定の規約と不整合である。
-この是正は本 issue の目的外であるため、本 issue では扱わない。
+`shiguredo/github-actions/.github/actions/slack-notify@main` を参照している。
+`shiguredo-github-actions` スキルは時雨堂のリポジトリの action を `@main` のままにすることを定めているため、
+これは規約どおりであり、本 issue では変更しない。
 
-### 依存関係
+### 前提
 
-- 本 issue の変更は追従作業の実装を伴わないため、`0001` から `0007` の完了を待たずに実施できる
-- ただし `.github/workflows/ci.yml` を変更すると `build` ジョブも同じ実行で走る。追従作業が未完了の間は
-  `build` ジョブが v0.8.0 のヘッダーで失敗しうるため、本 issue の PR では `verify` ジョブの検証が実施できないことがある
-- 実機での動作確認は、追従作業 (`0001` から `0007`) の PR 上で `verify` ジョブが通ることをもって確認する
-- `capture` の実機でのフレーム取得は、`0005` (`FrameBuffer::Plane::fd` の `SharedFD` 化への追従) の完了条件と重なる。
-  本 issue はその確認を CI で常設化するものであり、`0005` の完了条件は `0005` 側で満たす
+libcamera v0.8.0 への追従作業はすべて完了しており、`verify` ジョブは追従作業の各 PR で pass している。
+実機で `list_cameras` と `controls` が動くことは、その時点で 1 回確認できている。
+
+ただしそれは 1 回限りの確認であり、実機の libcamera が更新されたり 0.7 系に戻ったりしても CI は検知できない。
+本 issue の成果は、その確認を CI に常設して回帰を防ぐことである。
 
 ### ローカル手順の追記
 
@@ -106,20 +141,24 @@ aarch64 向けのクロスビルドとテストまでの記載で、実機動作
 
 ## 完了条件
 
-- `.github/workflows/ci.yml` の `verify` ジョブに、`dpkg-query` による libcamera バージョンの検証ステップが追加され、期待値 `0.8.0+rpt20261104-1` と一致しない場合に失敗する
+- `.github/workflows/ci.yml` の `verify` ジョブに、`dpkg-query` による libcamera バージョンの検証ステップが追加され、期待値と一致しない場合に失敗する
+- 期待値 `0.8.0+rpt20261104-1` はワークフロー内の 1 か所だけで定義し、以後のリリースで更新する箇所が 1 つに収まっている
 - 同じジョブに、`ldd` による `libcamera-base.so.0.8` の解決確認ステップが追加され、未解決の場合に失敗する
-- 同じジョブに `capture` の実行ステップが追加され、`list_cameras` の `camera_count` が 0 の場合は失敗し、1 以上の場合に `capture` の終了コードが CI の成否になる
+- 同じジョブに `capture` の実行ステップが追加され、`timeout` で上限を設けて実行し、打ち切られた場合と異常終了した場合の両方で失敗する
 - `docs/CONTAINER.md` に実機での確認手順と、Apple Container を利用できない環境向けの代替手順が記載されている
-- 本 issue の PR で `.github/workflows/ci.yml` の YAML としての妥当性が確認できている
+- `.github/workflows/ci.yml` と `.github/workflows/release.yml` が YAML として解析できる
+  (確認は対象を絞った `prek run check-yaml` で行う。`--all-files` を付けると既存の `.clang-format` が
+  複数ドキュメントを含むため失敗する)
 - `shiguredo-github-actions` スキルの規約 (runner 選定、`actions/cache` の不使用、action の追加なし) に違反していない
 
 ## 解決方法
 
 - `.github/workflows/ci.yml` の `verify` ジョブに次のステップを追加する
   - `dpkg-query` の存在を確認し、無い場合は `exit 1` するステップ
-  - `dpkg-query -W -f='${Version}' libcamera0.8` の結果を期待値 `0.8.0+rpt20261104-1` と比較するステップ
+  - `dpkg-query -W -f='${Version}' libcamera0.8` の結果を期待値と比較するステップ
   - 取得済みのサンプルバイナリに対して `ldd` を実行し、`libcamera-base.so.0.8` の有無と `not found` の有無を確認するステップ
-  - `list_cameras` を実行して JSON を保存し、`camera_count` を `python3` で読み取るステップ
-  - `camera_count` が 1 以上の場合に `capture` を実行するステップ
+  - `timeout` を付けて `capture` を実行するステップ
+- 期待値のバージョンはワークフローの `env` で 1 か所だけ定義し、各ステップから参照する
+- `shiguredo-github-actions` スキルの規約に従い、runner の選定理由と、実機でしか確認できない検証であることをコメントに残す
 - ログメッセージとステップの `name` は英語で書く。コメントは日本語で書く
 - `docs/CONTAINER.md` の末尾に、実機での確認手順と代替手順を追記する
