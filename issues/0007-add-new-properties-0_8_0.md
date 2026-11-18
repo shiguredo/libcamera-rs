@@ -1,7 +1,7 @@
 # v0.7.2 追従時に取りこぼしたプロパティを追加し不要になった定数を削除する
 
 - Created: 2026-11-13
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-11-18
 - Branch: feature/add-new-properties-0_8_0
 - Polished: 2026-11-13
 
@@ -149,3 +149,27 @@ v0.8.0 追従全体の変更履歴をドキュメント更新の issue が一括
 - `skills/shiguredo-libcamera/SKILL.md` は `PIXEL_ARRAY_SIZE` と `get_size(&props::PIXEL_ARRAY_SIZE)` を記載しており、
   本 issue でこの定数を削除すると記載が壊れる。この修正はドキュメント更新の issue が扱う
 - `CHANGES.md` の `develop` セクションに `[ADD]` と `[CHANGE]` を追加する
+
+## 解決方法 (実績)
+
+`src/property_ids.rs` の `core` モジュールから `PIXEL_ARRAY_SIZE` と `PIXEL_ARRAY_OPTICAL_BLACK_RECTANGLES` を削除し、
+同じ位置に `PIXEL_ARRAY_AREA` (ID 5) と `PIXEL_ARRAY_READABLE_AREA` (ID 6) を追加した。
+`SYSTEM_DEVICES` の後に `PIPELINE_HANDLER` (ID 11) を追加した。
+
+追加した 3 件は、いずれも型が `ControlType::Rectangle` または `ControlType::String`、方向が `Direction::Out`、
+vendor が `"libcamera"`、配列長が `None`、列挙子が空である。
+方向が `Out` である根拠は、libcamera の `utils/codegen/controls.py` がプロパティの方向を常に `out` としていることによる。
+
+`CHANGES.md` の `develop` セクションに `[CHANGE]` (2 件の削除) と `[ADD]` (3 件の追加) を担当者行付きで追記した。
+`c-api/`、`src/controls.rs`、`examples/` は変更していない。
+
+### 検証結果
+
+- `core` のプロパティ定数が ID 1 から 11 まで欠番なく 11 件になった
+- 11 件すべてについて、ID・名前・型・配列長が v0.8.0 の `property_ids_core.yaml` と一致することを機械的に確認した
+- 方向がすべて `Direction::Out` であることを確認した
+- `draft::COLOR_FILTER_ARRANGEMENT` と `color_filter_arrangement` モジュール、`core::location` の列挙値定数は変化していない
+- 削除した 2 件の定数への参照が Rust コードに残っていないことを確認した
+- `cargo fmt --all -- --check` が通る
+
+`cargo clippy` と実際のビルドは、この環境に libcamera と aarch64 向けの sysroot が無いため実行していない。
