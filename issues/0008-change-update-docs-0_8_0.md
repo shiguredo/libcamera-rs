@@ -14,8 +14,8 @@ libcamera v0.8.0+rpt20261104 へ追従した後もこれらが v0.7.2 のまま�
 
 また `skills/shiguredo-libcamera/SKILL.md` は 2026.1.0 時点の内容で更新が止まっており、
 対応 libcamera を v0.7.0+rpt20260205 と記載したままである。
-さらに、`ControlId` のシグネチャ変更、コントロール定数とプロパティ定数の追加削除、
-コントロール値の設定 API の変更が他の issue で行われるため、スキルの記述もそれに追随させる必要がある。
+さらに、`ControlId` のシグネチャ変更と、コントロール定数とプロパティ定数の追加削除が他の issue で行われるため、
+スキルの記述もそれに追随させる必要がある。
 
 本 issue は、これらのドキュメントを実装の現在の状態に合わせるものである。
 
@@ -23,7 +23,6 @@ libcamera v0.8.0+rpt20261104 へ追従した後もこれらが v0.7.2 のまま�
 
 本 issue はドキュメントの転記を扱うため、次の issue の完了後に着手する。
 
-- コントロール値の設定 API の変更 (`ControlList::set_*` の `Result` 化、`Error::ControlSetFailed` の追加、`owned` から `writable` への改名)
 - `ControlId` への vendor / 配列長 / 列挙子の追加と `ControlId::new` のシグネチャ変更
 - コントロール定数の追加と rpi の ID 是正
 - プロパティ定数の追加と削除
@@ -33,6 +32,13 @@ libcamera v0.8.0+rpt20261104 へ追従した後もこれらが v0.7.2 のまま�
 
 **libcamera v0.8.0 自体には新しいコントロールもプロパティも追加されていない。**
 コントロールの件数が変わるのは、v0.7.2 追従時に取りこぼした分の補完によるものである。
+
+### 本 issue の範囲外とする変更
+
+`ControlList::set_*` を `Result<()>` に変更し、書き込みを想定していないリストへの設定を失敗させる変更は、
+後方互換のない変更であるため、v0.8.0 追従とは別の issue として保留している。
+したがって本 issue では、`ControlList` の `set_*` に関する記述は現行のまま維持する。
+`owned` という名前や `set_*` の戻り値、`Error::ControlSetFailed` には触れない。
 
 ## 現状
 
@@ -54,15 +60,10 @@ v0.8.0 追従の影響を受けるドキュメントと、現在の記述は次�
 | `- バージョン: 2026.1.0` | `Cargo.toml` のバージョンは 2026.2.0 |
 | `- 対応 libcamera: **v0.7.0+rpt20260205**` | 対応バージョンが v0.8.0+rpt20261104 になる |
 | `v0.7.0+rpt20260205 系を想定している` (既知の制限事項) | 同上 |
-| `controls()` / `metadata()` で返る `ControlList` は非所有 (`owned = false`) | `owned` が `writable` に改名される |
-| `戻り値なし (libcamera 側でバリデーション)。` (設定の節) | `set_*` が `Result<()>` を返すようになる |
-| `set_*` メソッドは Result を返さない (既知の制限事項) | 同上 |
-| エラー型表に `ControlSetFailed` が無い | `Error::ControlSetFailed` が追加される |
 | `ControlId::new(id, name, control_type, direction)` | `ControlId::new` のシグネチャが変わる |
 | `core` の `ID 1..52` | `Hue` の追加により 53 件になる |
 | `properties::core` に `PIXEL_ARRAY_SIZE` | `PIXEL_ARRAY_SIZE` が削除され、別の定数に置き換わる |
 | `props_list.get_size(&props::PIXEL_ARRAY_SIZE)` (コード例) | 同上。`get_size` ではなく `get_rectangle` を使う形になる |
-| `controls.set_f32(&core::BRIGHTNESS, 0.2)` (コード例) | `set_*` が `Result<()>` を返すようになる |
 
 ## 設計方針
 
@@ -94,13 +95,11 @@ v0.8.0 追従の影響を受けるドキュメントと、現在の記述は次�
 次の節を更新する。
 
 - バージョン情報: バージョンを `Cargo.toml` の値に合わせ、対応 libcamera を v0.8.0+rpt20261104 にする
-- 既知の制限事項: libcamera のバージョンに関する記述と、`set_*` が `Result` を返さないという記述を更新する
-- `ControlList`: `set_*` が `Result<()>` を返すこと、`owned` を `writable` に読み替えることを反映する
-- エラー型: `ControlSetFailed` を追加する
-- `ControlId`: `ControlId::new` のシグネチャと、追加される getter を反映する
+- 既知の制限事項: libcamera のバージョンに関する記述を更新する
+- `ControlId`: `ControlId::new` のシグネチャと、追加される `vendor()` / `array_length()` / `enumerators()` を反映する
 - コントロール定数: `core` の ID の範囲と、rpi の CNN 系の ID を更新する
 - プロパティ定数: 削除される定数と追加される定数に合わせて一覧を差し替える
-- コード例: プロパティの読み取り例を `get_rectangle` を使う形にし、コントロールの設定例を `Result` を処理する形にする
+- コード例: プロパティの読み取り例を `get_rectangle` を使う形にする
 - 動作環境: `Dev Container セットアップガイドを参照` という記述は、リポジトリに該当する文書が無いため、
   `README.md` の Dev Containers の節を参照する形に正す。`docs/CONTAINER.md` は実機検証の issue が扱うため変更しない
 
@@ -109,7 +108,7 @@ v0.8.0 追従の影響を受けるドキュメントと、現在の記述は次�
 `shiguredo-changelog` スキルの規約に従い、`develop` セクションに
 `[UPDATE] 対応 libcamera を v0.8.0+rpt20261104 に更新する` の 1 件だけを担当者行付きで追記する。
 
-定数の追加削除、`set_*` の `Result` 化、`ControlId` の変更は、それぞれの issue が自身で記載するため、
+定数の追加削除と `ControlId` の変更は、それぞれの issue が自身で記載するため、
 本 issue では重複して記載しない。
 `README.md`、`docs/CONTROLS.md`、`skills/shiguredo-libcamera/SKILL.md` の変更は、
 `shiguredo-changelog` の規約に従い変更履歴には記載しない。
@@ -125,10 +124,8 @@ v0.8.0 追従の影響を受けるドキュメントと、現在の記述は次�
 - `skills/shiguredo-libcamera/SKILL.md` に、次の文字列が残っていない
   - `2026.1.0`
   - `v0.7.0+rpt20260205`
-  - `owned`
   - `PIXEL_ARRAY_SIZE`
   - `ID 1..52`
-- `skills/shiguredo-libcamera/SKILL.md` に `ControlSetFailed` が記載されている
 - `skills/shiguredo-libcamera/SKILL.md` のコード例が、完了時点の公開 API で動作する形になっている
 - `CHANGES.md` の `develop` セクションに `[UPDATE]` が担当者行付きで 1 件だけ記載されている
 - `prek run --all-files` が通る (行末の空白、ファイル末尾の改行、改行コードの検査を含む)
