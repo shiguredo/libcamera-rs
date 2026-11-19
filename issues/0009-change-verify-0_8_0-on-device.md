@@ -1,7 +1,7 @@
 # libcamera v0.8.0 追従を実機 Raspberry Pi で検証できる手順を整備する
 
 - Created: 2026-11-13
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-11-19
 - Branch: feature/update-verify-0_8_0-on-device
 - Polished: 2026-11-18
 
@@ -251,3 +251,31 @@ GitHub Actions は先行するステップが失敗すると後続を実行し�
 - `shiguredo-github-actions` スキルの規約に従い、runner の選定理由と、実機でしか確認できない検証であることをコメントに残す
 - ログメッセージとステップの `name` は英語で書く。コメントは日本語で書く
 - `docs/CONTAINER.md` の末尾に、実機での確認手順を新しい章として追記する
+
+## 解決方法 (実績)
+
+`sysroot/raspberry-pi-os_armv8.json` の `packages` を `libcamera-dev:arm64=0.8.0+rpt20261104-1` に変更し、
+`sysroot` に取り込む deb の版を固定した。
+
+`.github/workflows/ci.yml` の `verify` ジョブに次の `env` とステップを追加した。
+
+- `EXPECTED_LIBCAMERA_VERSION`、`EXPECTED_LIBCAMERA_BASE_SONAME`、`CAPTURE_TIMEOUT_SECONDS` を `env` で定義した
+- `Check dpkg-query availability` で `dpkg-query` の有無を確認する
+- `Verify libcamera version` で `dpkg-query -W -f='${Version}' libcamera0.8` の結果を期待値と比較する
+- `Verify libcamera-base SONAME resolution` で `ldd` の出力に `libcamera-base.so.0.8` が含まれ、`not found` が無いことを確認する
+- `Run capture` で `timeout` を付けて `capture` を実行する
+
+バージョン検証と SONAME の解決確認は `Run list_cameras` より前に置いた。
+`controls` がカメラ 0 台で終了コード 1 になるため、`Run capture` は `Run controls` の後に置いた。
+
+`docs/CONTAINER.md` の冒頭に実機確認が別手順である旨を追記し、末尾に「実機 Raspberry Pi での確認」の章を新設した。
+章には、サンプルの用意、`dpkg-query` によるバージョン確認、`ldd` による解決確認、サンプルの実行を書いた。
+
+### 検証結果
+
+- `sysroot/raspberry-pi-os_armv8.json` の固定値と `verify` ジョブの期待値が一致することを確認した
+- `verify` ジョブのステップ順が、バージョン検証と SONAME の解決確認を `Run list_cameras` より前にしていることを確認した
+- `ldd` の判定を、解決できる場合、SONAME が違う場合、`not found` を含む場合の 3 通りで確認した
+- `timeout` の終了コードを握りつぶす記述が無いことを確認した
+- `actions/cache` を使わず、action を追加していないことを確認した
+- `.github/workflows/ci.yml`、`.github/workflows/release.yml`、`sysroot/raspberry-pi-os_armv8.json` が YAML として解析できることを確認した
