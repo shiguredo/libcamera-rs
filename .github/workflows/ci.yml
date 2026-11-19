@@ -78,14 +78,53 @@ jobs:
   verify:
     name: Verify (Raspberry Pi)
     needs: build
+    # 実機にインストールされた libcamera と、その共有ライブラリの解決は実機でしか確認できないため、
+    # Raspberry Pi の self-hosted ランナーで実行する。
     runs-on:
       group: Self
       labels: [self-hosted, linux, ARM64, Raspberry-Pi]
     timeout-minutes: 10
+    env:
+      # Raspberry Pi アーカイブの libcamera0.8 のバージョン。sysroot/raspberry-pi-os_armv8.json の固定値と揃えること。
+      EXPECTED_LIBCAMERA_VERSION: "0.8.0+rpt20261104-1"
+      # リンク時に取り込んだ libcamera-base の SONAME。libcamera v0.8.0 で 0.7 から 0.8 に上がった。
+      EXPECTED_LIBCAMERA_BASE_SONAME: "libcamera-base.so.0.8"
+      # capture はフレームが目標数に達しないと終了しないため、ジョブのタイムアウトより短い上限を設ける。
+      CAPTURE_TIMEOUT_SECONDS: 120
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: libcamera-examples-aarch64
+      # 以下のバージョン検証と SONAME の解決確認は、サンプルの実行より前に置く。
+      # SONAME が解決できない実機では list_cameras が動的リンカの時点で落ちるため、
+      # 後ろに置くと原因がバージョンのずれなのか別の要因なのかを切り分けられない。
+      - name: Check dpkg-query availability
+        run: |
+          if ! command -v dpkg-query > /dev/null 2>&1; then
+            echo "dpkg-query is not available" >&2
+            exit 1
+          fi
+      - name: Verify libcamera version
+        run: |
+          actual="$(dpkg-query -W -f='${Version}' libcamera0.8)"
+          if [ "${actual}" != "${EXPECTED_LIBCAMERA_VERSION}" ]; then
+            echo "libcamera version mismatch: expected ${EXPECTED_LIBCAMERA_VERSION}, got ${actual}" >&2
+            exit 1
+          fi
+          echo "libcamera version: ${actual}"
+      - name: Verify libcamera-base SONAME resolution
+        run: |
+          chmod +x list_cameras
+          ldd_output="$(ldd ./list_cameras)"
+          echo "${ldd_output}"
+          if ! printf '%s\n' "${ldd_output}" | grep -qF "${EXPECTED_LIBCAMERA_BASE_SONAME}"; then
+            echo "${EXPECTED_LIBCAMERA_BASE_SONAME} is not linked" >&2
+            exit 1
+          fi
+          if printf '%s\n' "${ldd_output}" | grep -q "not found"; then
+            echo "unresolved shared libraries detected" >&2
+            exit 1
+          fi
       - name: Run list_cameras
         run: |
           chmod +x list_cameras
@@ -94,6 +133,11 @@ jobs:
         run: |
           chmod +x controls
           ./controls
+      # controls はカメラ 0 台で終了コード 1 になるため、カメラが無ければこのステップには進まない。
+      - name: Run capture
+        run: |
+          chmod +x capture
+          timeout "${CAPTURE_TIMEOUT_SECONDS}" ./capture
 
   slack_notify:
     needs: [build, verify]
