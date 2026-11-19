@@ -15,7 +15,7 @@
     "packages": [
         "libc6-dev",
         "libstdc++-14-dev",
-        "libcamera-dev"
+        "libcamera-dev:arm64=0.8.0+rpt20261104-1"
     ],
     "repos": [
         {
